@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora de Finiquito Chile</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header class="top wrap">
+  <div class="top-inner">
+    <div>
+      <p class="eyebrow">Chile · Código del Trabajo</p>
+      <h1>Calculadora de finiquito</h1>
+      <p class="lede">Estima cuánto te corresponde al terminar tu contrato usando los datos de tu liquidación de sueldo. Compárala con la propuesta de tu empleador antes de firmar.</p>
+    </div>
+    <div class="top-actions">
+      <button type="button" id="btnEjemplo" class="btn">Ver ejemplo</button>
+      <button type="button" id="btnLimpiar" class="btn">Empezar de cero</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="banner" class="banner" hidden>
+    <span id="bannerTxt">Estás viendo un <strong>ejemplo con datos ficticios</strong>. Cámbialos por los tuyos.</span>
+    <button type="button" id="btnBannerLimpiar" class="linkbtn">Borrar el ejemplo y usar mis datos</button>
+  </div>
+</div>
+
+<main class="layout wrap">
+  <form id="form" class="steps" autocomplete="off" novalidate>
+
+    <!-- Atajo: cargar liquidación -->
+    <section class="step importer" id="importCard" aria-labelledby="hImp">
+      <div class="imp-head">
+        <p class="eyebrow">Atajo opcional</p>
+        <h2 id="hImp">Carga tu liquidación de sueldo</h2>
+        <p class="muted" style="margin-top:4px;font-size:14px">Sube el PDF de tu última liquidación y completamos los montos del paso 2. Si tienes comisiones, sube las de los últimos 3 meses. Revisarás todo antes de aplicarlo.</p>
+      </div>
+      <label class="drop" id="dropZone" for="pdfInput">
+        <input type="file" id="pdfInput" class="sr" accept="application/pdf,.pdf" multiple>
+        <span class="drop-t">Arrastra aquí tus PDF o <u>elige archivos</u></span>
+        <span class="hint">Hasta 3 liquidaciones en PDF. Se leen en este navegador: no se envían a ningún servidor ni se guardan.</span>
+      </label>
+      <div id="pwdWrap" class="pwd" hidden>
+        <label class="label" for="pdfPwd" id="pwdLbl">Este PDF tiene clave</label>
+        <div class="pwd-row"><input type="password" id="pdfPwd" autocomplete="off"><button type="button" id="btnPwd" class="btn small primary">Abrir</button><button type="button" id="btnPwdSkip" class="btn small">Omitir</button></div>
+        <p class="hint">Suele ser tu RUT o parte de él. La clave no se guarda.</p>
+      </div>
+      <p id="impStatus" class="imp-status" role="status" aria-live="polite"></p>
+      <div id="impReview" hidden></div>
+    </section>
+
+    <!-- Paso 1 -->
+    <section class="step" aria-labelledby="h1paso">
+      <div class="step-head"><span class="step-n">1</span><div><h2 id="h1paso">Tu contrato</h2><p>Cómo terminó y cuánto tiempo trabajaste.</p></div></div>
+      <div class="grid">
+        <div class="field">
+          <label class="label" for="tipo">Tipo de contrato</label>
+          <select id="tipo">
+            <option value="indefinido">Indefinido</option>
+            <option value="plazo">Plazo fijo</option>
+            <option value="obra">Por obra o faena</option>
+            <option value="casa">Trabajador/a de casa particular</option>
+          </select>
+          <p class="hint">Aparece en tu contrato y en tu liquidación.</p>
+        </div>
+        <div class="field">
+          <label class="label" for="causal">¿Por qué terminó?</label>
+          <select id="causal">
+            <optgroup label="Lo decidió el empleador">
+              <option value="161">Despido por necesidades de la empresa</option>
+              <option value="161d">Desahucio (gerentes y cargos de confianza)</option>
+              <option value="160">Despido por una falta del trabajador</option>
+              <option value="163bis">Liquidación o quiebra de la empresa</option>
+            </optgroup>
+            <optgroup label="Otras causas">
+              <option value="159_2">Renuncia voluntaria</option>
+              <option value="159_1">Mutuo acuerdo</option>
+              <option value="159_4">Venció el plazo del contrato</option>
+              <option value="159_5">Terminó la obra o faena</option>
+              <option value="159_6">Caso fortuito o fuerza mayor</option>
+              <option value="171">Autodespido (despido indirecto)</option>
+            </optgroup>
+          </select>
+          <p class="hint">Revisa la carta de despido: indica el artículo (161, 160, 159…).</p>
+        </div>
+        <p id="causalInfo" class="note field wide"></p>
+        <div class="field">
+          <label class="label" for="fechaIngreso">Fecha de ingreso</label>
+          <input id="fechaIngreso" type="date">
+          <p class="hint">Primer día de trabajo con este empleador.</p>
+        </div>
+        <div class="field">
+          <label class="label" for="fechaTermino">Último día de trabajo</label>
+          <input id="fechaTermino" type="date">
+          <p class="hint">La fecha de término que indica la carta.</p>
+        </div>
+        <p id="antReadout" class="readout field wide" aria-live="polite"></p>
+        <div class="field wide" id="avisoWrap">
+          <span class="label" id="avisoLbl">¿Te avisaron por escrito con al menos 30 días de anticipación?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="avisoLbl">
+            <label><input type="radio" name="aviso30" value="no"><span>No, o con menos de 30 días</span></label>
+            <label><input type="radio" name="aviso30" value="si"><span>Sí, con 30 días o más</span></label>
+          </div>
+          <p class="hint">Si no te avisaron con 30 días, te deben un mes extra de sueldo: la <strong>indemnización sustitutiva del aviso previo</strong>.</p>
+        </div>
+        <div class="field wide" id="recargoWrap">
+          <label class="label" for="recargo171">¿Qué incumplimiento del empleador invocaste?</label>
+          <select id="recargo171">
+            <option value="50">No pagar sueldo o cotizaciones, u otro incumplimiento grave (+50%)</option>
+            <option value="80">Acoso, injurias, conductas indebidas o riesgo para tu salud (hasta +80%)</option>
+          </select>
+          <p class="hint">El recargo lo fija el tribunal. Debes enviar la carta de autodespido y demandar dentro de 60 días hábiles.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paso 2 -->
+    <section class="step" aria-labelledby="h2paso">
+      <div class="step-head"><span class="step-n">2</span><div><h2 id="h2paso">Tu sueldo</h2><p>Copia los montos de tu última liquidación. Son montos brutos, antes de descuentos.</p></div></div>
+      <div class="grid">
+        <div class="field">
+          <label class="label" for="sueldoBase">Sueldo base</label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="sueldoBase" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+          <p class="hint">En la liquidación: “Sueldo base”.</p>
+        </div>
+        <div class="field">
+          <label class="label" for="bonosFijos">Otros pagos fijos cada mes <span class="opt">(opcional)</span></label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="bonosFijos" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+          <p class="hint">Bonos imponibles que recibes todos los meses por el mismo monto: asignación de responsabilidad, de antigüedad, etc.</p>
+        </div>
+        <div class="field wide">
+          <span class="label" id="gratLbl">Gratificación</span>
+          <div class="seg" role="radiogroup" aria-labelledby="gratLbl">
+            <label><input type="radio" name="gratMode" value="mensual"><span>La recibo todos los meses</span></label>
+            <label><input type="radio" name="gratMode" value="no"><span>No la recibo mensual</span></label>
+          </div>
+        </div>
+        <div class="field" id="gratWrap">
+          <label class="label" for="gratMonto">Gratificación mensual</label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="gratMonto" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+          <p class="hint" id="gratHint">En la liquidación: “Gratificación legal”. <button type="button" id="btnGrat" class="linkbtn">Calcularla por mí</button></p>
+        </div>
+        <div class="field wide">
+          <span class="label">Comisiones y bonos variables de los últimos 3 meses <span class="opt">(opcional)</span></span>
+          <div class="months3">
+            <div class="affix has-pre"><span class="pre">$</span><input id="var1" type="text" inputmode="numeric" data-t="money" placeholder="Mes 1" aria-label="Variables mes 1"></div>
+            <div class="affix has-pre"><span class="pre">$</span><input id="var2" type="text" inputmode="numeric" data-t="money" placeholder="Mes 2" aria-label="Variables mes 2"></div>
+            <div class="affix has-pre"><span class="pre">$</span><input id="var3" type="text" inputmode="numeric" data-t="money" placeholder="Mes 3" aria-label="Variables mes 3"></div>
+          </div>
+          <p class="hint">Comisiones, bonos de producción o metas y <strong>semana corrida</strong>. Si un mes no tuviste, déjalo vacío: se promedia entre 3. No incluyas horas extra.</p>
+          <p class="hint" id="promVarReadout"></p>
+        </div>
+        <div class="field">
+          <label class="label" for="colacion">Asignación de colación <span class="opt">(opcional)</span></label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="colacion" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="movilizacion">Asignación de movilización <span class="opt">(opcional)</span></label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="movilizacion" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+        </div>
+        <div class="field wide">
+          <label class="check"><input type="checkbox" id="incluirColMov"><span>Sumar colación y movilización a la base de las indemnizaciones</span></label>
+          <details class="more"><summary>¿Por qué es opcional?</summary><div>
+            <p>No son sueldo, pero el artículo 172 dice que la base incluye “toda cantidad” que recibes cada mes. La Dirección del Trabajo y fallos recientes de la Corte Suprema las incluyen cuando se pagan todos los meses. Algunas empresas no lo hacen; si tu finiquito no las incluye, puedes reclamarlo.</p>
+          </div></details>
+        </div>
+      </div>
+      <details class="more" style="margin-top:14px"><summary>¿Qué no se considera para las indemnizaciones?</summary><div>
+        <p>Por ley (art. 172) se excluyen las horas extra, la asignación familiar y los bonos que se pagan de vez en cuando o una vez al año, como aguinaldos o bonos de vacaciones. Si tus comisiones varían, se usa el promedio de los últimos 3 meses.</p>
+        <p>Para las indemnizaciones hay un tope: la base no puede superar 90 UF al mes.</p>
+      </div></details>
+    </section>
+
+    <!-- Paso 3 -->
+    <section class="step" aria-labelledby="h3paso">
+      <div class="step-head"><span class="step-n">3</span><div><h2 id="h3paso">Vacaciones pendientes</h2><p>Los días que no alcanzaste a tomar se pagan en el finiquito.</p></div></div>
+      <div class="grid">
+        <div class="field wide">
+          <span class="label" id="vacLbl">¿Cómo quieres ingresarlas?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="vacLbl">
+            <label><input type="radio" name="vacMode" value="saldo"><span>Sé mi saldo de días</span></label>
+            <label><input type="radio" name="vacMode" value="calc"><span>Calcularlo con mis fechas</span></label>
+          </div>
+        </div>
+        <div class="field" id="vacSaldoWrap">
+          <label class="label" for="vacSaldo">Saldo de vacaciones</label>
+          <div class="affix has-suf"><input id="vacSaldo" type="text" inputmode="decimal" data-t="dec" placeholder="0"><span class="suf">días</span></div>
+          <p class="hint">Días hábiles. Suele aparecer en la liquidación o en el portal de RR.HH. como “saldo de vacaciones”. Acepta decimales (12,5).</p>
+        </div>
+        <div class="field" id="vacPendWrap">
+          <label class="label" for="vacPendientes">Días pendientes de años anteriores</label>
+          <div class="affix has-suf"><input id="vacPendientes" type="text" inputmode="decimal" data-t="dec" placeholder="0"><span class="suf">días</span></div>
+          <p class="hint">Días hábiles de años ya cumplidos que no tomaste.</p>
+        </div>
+        <div class="field" id="vacTomWrap">
+          <label class="label" for="vacTomados">Días que ya tomaste este año laboral</label>
+          <div class="affix has-suf"><input id="vacTomados" type="text" inputmode="decimal" data-t="dec" placeholder="0"><span class="suf">días</span></div>
+          <p class="hint">Desde tu último aniversario de ingreso.</p>
+        </div>
+        <div class="field" id="vacProgWrap">
+          <label class="label" for="vacProgresivo">Feriado progresivo <span class="opt">(si tienes)</span></label>
+          <div class="affix has-suf"><input id="vacProgresivo" type="text" inputmode="decimal" data-t="dec" placeholder="0"><span class="suf">días/año</span></div>
+          <p class="hint">Días extra al año por más de 10 años trabajados (art. 68).</p>
+        </div>
+        <p id="vacReadout" class="readout field wide" aria-live="polite"></p>
+        <div class="field wide">
+          <label class="check"><input type="checkbox" id="vacConGrat"><span>Incluir la gratificación en el valor del día de vacaciones</span></label>
+          <p class="hint">La Dirección del Trabajo indica que el valor del día se calcula con sueldo base, pagos fijos y promedio de variables, sin gratificación. Algunas empresas sí la incluyen.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paso 4 -->
+    <section class="step" aria-labelledby="h4paso">
+      <div class="step-head"><span class="step-n">4</span><div><h2 id="h4paso">Último mes, otros pagos y descuentos</h2><p>Lo que se te debe del mes en que terminó el contrato.</p></div></div>
+      <div class="grid">
+        <div class="field wide">
+          <label class="check"><input type="checkbox" id="incluyeUltimoMes"><span>El finiquito incluye el sueldo de los días trabajados del último mes</span></label>
+          <p class="hint">Desmárcalo si ese sueldo te lo pagan aparte, en la liquidación normal del mes.</p>
+        </div>
+        <div class="field" id="diasWrap">
+          <label class="label" for="diasTrabajados">Días trabajados del último mes</label>
+          <div class="affix has-suf"><input id="diasTrabajados" type="text" inputmode="decimal" data-t="dec" placeholder="0"><span class="suf">días</span></div>
+          <p class="hint">Se calcula con la fecha de término. El mes completo cuenta como 30.</p>
+        </div>
+        <div class="field" id="varMesWrap">
+          <label class="label" for="varMes">Comisiones del último mes sin pagar <span class="opt">(opcional)</span></label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="varMes" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+        </div>
+        <div class="field" id="hheeWrap">
+          <label class="label" for="hhee">Horas extra sin pagar <span class="opt">(opcional)</span></label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="hhee" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+        </div>
+        <div class="field" id="bonoPendWrap">
+          <label class="label" for="bonoPend">Bonos pendientes <span class="opt">(opcional)</span></label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="bonoPend" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+          <p class="hint">Por ejemplo, un bono anual proporcional si tu contrato lo establece.</p>
+        </div>
+      </div>
+
+      <div class="sub" id="descLegWrap">
+        <h3>Descuentos legales sobre el sueldo pendiente</h3>
+        <div class="seg" role="radiogroup" aria-label="Cómo calcular los descuentos legales">
+          <label><input type="radio" name="descMode" value="auto"><span>Calcularlos</span></label>
+          <label><input type="radio" name="descMode" value="manual"><span>Ingresar el monto</span></label>
+        </div>
+        <div class="grid">
+          <div class="field" id="afpWrap">
+            <label class="label" for="afp">Tu AFP</label>
+            <select id="afp">
+              <option value="capital">Capital (comisión 1,44%)</option>
+              <option value="cuprum">Cuprum (1,44%)</option>
+              <option value="habitat">Habitat (1,27%)</option>
+              <option value="modelo">Modelo (0,58%)</option>
+              <option value="planvital">PlanVital (1,16%)</option>
+              <option value="provida">ProVida (1,45%)</option>
+              <option value="uno">Uno (0,46%)</option>
+            </select>
+            <p class="hint">Se descuenta 10% + comisión, salud 7%, seguro de cesantía 0,6% (contrato indefinido) e impuesto único si corresponde.</p>
+          </div>
+          <div class="field" id="descManualWrap">
+            <label class="label" for="descManual">Total de descuentos legales</label>
+            <div class="affix has-pre"><span class="pre">$</span><input id="descManual" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+            <p class="hint">AFP, salud, seguro de cesantía e impuesto, según tu finiquito.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub">
+        <h3>Otros pagos y descuentos</h3>
+        <div class="grid">
+          <div class="field">
+            <label class="label" for="indemVoluntaria" id="volLbl">Indemnización voluntaria o bono por retiro <span class="opt">(opcional)</span></label>
+            <div class="affix has-pre"><span class="pre">$</span><input id="indemVoluntaria" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+            <p class="hint">Un monto extra que te ofrezcan o hayan acordado.</p>
+          </div>
+          <div class="field">
+            <label class="label" for="otrosNoImp">Reembolsos u otros pagos <span class="opt">(opcional)</span></label>
+            <div class="affix has-pre"><span class="pre">$</span><input id="otrosNoImp" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+            <p class="hint">Gastos por rendir, viáticos adeudados, etc.</p>
+          </div>
+          <div class="field">
+            <label class="label" for="descOtros">Anticipos o préstamos a descontar <span class="opt">(opcional)</span></label>
+            <div class="affix has-pre"><span class="pre">$</span><input id="descOtros" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+            <p class="hint">Solo los que tú autorizaste por escrito.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub" id="afcWrap">
+        <h3>Descuento del seguro de cesantía</h3>
+        <p class="hint">Con despido por necesidades de la empresa o fin de obra, el empleador puede restar de la indemnización lo que aportó a tu cuenta del seguro de cesantía (AFC). Ese dinero no se pierde: lo puedes retirar en la AFC.</p>
+        <div class="seg" role="radiogroup" aria-label="Descuento del seguro de cesantía">
+          <label><input type="radio" name="afcMode" value="estimar"><span>Estimarlo</span></label>
+          <label><input type="radio" name="afcMode" value="monto"><span>Sé el monto</span></label>
+          <label><input type="radio" name="afcMode" value="no"><span>No lo descuentan</span></label>
+        </div>
+        <div class="field" id="afcMontoWrap">
+          <label class="label" for="afcMonto">Monto que descuentan</label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="afcMonto" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
+          <p class="hint">En el finiquito suele aparecer como “Aporte empleador seguro de cesantía” o “Art. 13 Ley 19.728”.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paso 5 -->
+    <section class="step" aria-labelledby="h5paso">
+      <div class="step-head"><span class="step-n">5</span><div><h2 id="h5paso">Compara con lo que te ofrecen <span class="muted" style="font:400 14px var(--font-body)">(opcional)</span></h2><p>Si ya tienes una propuesta de finiquito, copia sus montos y verás las diferencias.</p></div></div>
+      <label class="check"><input type="checkbox" id="comparar"><span>Tengo una propuesta de finiquito</span></label>
+      <div class="grid" id="cmpWrap" style="margin-top:16px">
+        <div class="field"><label class="label" for="ofrIas">Indemnización por años de servicio</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrIas" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
+        <div class="field"><label class="label" for="ofrAviso">Aviso previo (mes de aviso)</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrAviso" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
+        <div class="field"><label class="label" for="ofrVac">Vacaciones (feriado legal y proporcional)</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrVac" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
+        <div class="field"><label class="label" for="ofrRem">Sueldo y otros pagos pendientes</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrRem" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
+        <div class="field"><label class="label" for="ofrVol">Indemnización voluntaria</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrVol" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
+        <div class="field"><label class="label" for="ofrDesc">Total de descuentos</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrDesc" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
+      </div>
+    </section>
+
+    <!-- Ajustes -->
+    <details class="settings" id="settings">
+      <summary>Valores legales y ajustes avanzados</summary>
+      <p class="hint" style="margin-top:10px">La UF, la UTM y el ingreso mínimo se cargan solos según la fecha de pago del finiquito. Puedes cambiarlos si lo necesitas: escribe los montos como en Chile, con punto para miles y coma para decimales (41.057,20). El cálculo se actualiza al salir del campo. <button type="button" id="btnParams" class="linkbtn">Volver a los valores automáticos</button></p>
+      <div class="grid">
+        <div class="field">
+          <label class="label" for="fechaPago">Fecha de pago del finiquito <span class="opt">(opcional)</span></label>
+          <input id="fechaPago" type="date">
+          <p class="hint">Define qué UF y UTM se usan. Si la dejas vacía, usamos tu último día de trabajo. El empleador tiene 10 días hábiles para pagar.</p>
+        </div>
+        <div class="field">
+          <label class="label" for="uf">Valor UF</label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="uf" type="text" inputmode="decimal" data-t="num"></div>
+          <p class="hint" id="ufAuto"></p>
+        </div>
+        <div class="field">
+          <label class="label" for="utm">Valor UTM</label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="utm" type="text" inputmode="decimal" data-t="num"></div>
+          <p class="hint" id="utmAuto"></p>
+        </div>
+        <div class="field">
+          <label class="label" for="imm">Ingreso mínimo mensual</label>
+          <div class="affix has-pre"><span class="pre">$</span><input id="imm" type="text" inputmode="decimal" data-t="num"></div>
+          <p class="hint" id="immAuto"></p>
+        </div>
+        <div class="field">
+          <label class="label" for="topeAfp">Tope imponible AFP y salud</label>
+          <div class="affix has-suf"><input id="topeAfp" type="text" inputmode="decimal" data-t="num"><span class="suf">UF</span></div>
+        </div>
+        <div class="field">
+          <label class="label" for="topeAfc">Tope imponible seguro de cesantía</label>
+          <div class="affix has-suf"><input id="topeAfc" type="text" inputmode="decimal" data-t="num"><span class="suf">UF</span></div>
+        </div>
+        <div class="field">
+          <label class="label" for="diasPorAnio">Días de indemnización por año</label>
+          <div class="affix has-suf"><input id="diasPorAnio" type="text" inputmode="decimal" data-t="num"><span class="suf">días</span></div>
+          <p class="hint">La ley da 30. Cámbialo solo si tu contrato o convenio colectivo pacta más.</p>
+        </div>
+        <div class="field wide">
+          <label class="check"><input type="checkbox" id="sinTopeAnios"><span>Mi contrato o convenio no tiene el tope de 11 años</span></label>
+          <p class="hint">Contratos anteriores al 14-08-1981 tampoco tienen tope; la calculadora lo detecta con la fecha de ingreso.</p>
+        </div>
+        <div class="field wide">
+          <label class="label" for="feriadosExtra">Feriados adicionales <span class="opt">(opcional)</span></label>
+          <textarea id="feriadosExtra" placeholder="Ej: 07-06-2027, 20-08-2027"></textarea>
+          <p class="hint">Los feriados nacionales ya están incluidos para convertir las vacaciones a días corridos. Agrega aquí feriados regionales o nuevos, en formato dd-mm-aaaa.</p>
+        </div>
+      </div>
+    </details>
+  </form>
+
+  <!-- Resultado -->
+  <aside class="result" id="resultado" aria-labelledby="resTitle">
+    <div class="boleta">
+      <div class="boleta-head">
+        <div>
+          <p class="eyebrow">Estimación</p>
+          <h2 id="resTitle">Tu finiquito</h2>
+          <p class="meta" id="resMeta"></p>
+        </div>
+        <span class="stamp">Referencial</span>
+      </div>
+      <div id="resGroups" aria-live="polite"></div>
+      <div class="total-row"><span>Total a recibir</span><strong id="resTotal">$0</strong></div>
+      <p class="fine">Toca cada línea para ver cómo se calculó. Las indemnizaciones y vacaciones no pagan impuesto ni cotizaciones; el sueldo pendiente sí.</p>
+      <p class="fine" id="resParams"></p>
+      <div class="res-actions">
+        <button type="button" id="btnCopiar" class="btn small">Copiar resumen</button>
+        <button type="button" id="btnImprimir" class="btn small" hidden>Imprimir o guardar PDF</button>
+        <span id="toast" class="toast" role="status"></span>
+      </div>
+    </div>
+    <div id="resCmp" class="panel" hidden></div>
+    <div id="resJuicio" class="panel tint" hidden></div>
+    <div class="panel" id="resAvisosPanel">
+      <h3>Revisa esto</h3>
+      <ul id="resAvisos" class="avisos"></ul>
+    </div>
+    <div class="panel">
+      <h3>Antes de firmar</h3>
+      <ul class="checklist">
+        <li>El empleador debe tener listo el finiquito y su pago dentro de <strong>10 días hábiles</strong> desde el término.</li>
+        <li>Se firma ante un ministro de fe (notaría o Inspección del Trabajo) o de forma electrónica en el portal <strong>Mi DT</strong>.</li>
+        <li>Revisa que todas tus cotizaciones estén pagadas (pide tu certificado a la AFP o en Previred). Si hay deudas, el despido no pone fin al contrato y siguen corriendo sueldos (Ley Bustos).</li>
+        <li>Si no estás de acuerdo con algo, puedes firmar escribiendo a mano una <strong>reserva de derechos</strong>, que indique qué vas a reclamar.</li>
+        <li>Para demandar por despido injustificado tienes <strong>60 días hábiles</strong> desde el término (hasta 90 si primero reclamas en la Inspección del Trabajo).</li>
+        <li>Si tenías fuero (maternal, sindical u otro), el empleador necesita autorización judicial para despedirte.</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<div class="mobilebar" id="mobilebar">
+  <div><span class="lbl">Total estimado</span><strong id="mbTotal">$0</strong></div>
+  <a href="#resultado" class="btn small primary">Ver detalle</a>
+</div>
+
+<footer class="wrap">
+  <p>Herramienta referencial basada en los artículos 159 a 178 del Código del Trabajo, la Ley 19.728 (seguro de cesantía) y la Ley 21.122 (obra o faena). No reemplaza la revisión de la Dirección del Trabajo (dt.gob.cl, 600 450 4000) ni la asesoría de un abogado.</p>
+  <p class="noprint">Tus datos se guardan solo en este navegador. Las liquidaciones que cargues se leen aquí mismo y no se guardan ni se envían. Funciona sin conexión a internet.</p>
+</footer>
+
+<!-- Lector de PDF (pdf.js 3.11.174, Mozilla, licencia Apache 2.0). Se usa solo en este navegador. -->
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="vendor/pdfjs/pdf.worker.min.js"></script>
+<!-- Motor de cálculo y lector de liquidaciones (sin interfaz) -->
+<script src="motor/calculo.js"></script>
+<script src="motor/lector.js"></script>
+<!-- Interfaz -->
+<script src="interfaz.js"></script>
+</body>
+</html>
