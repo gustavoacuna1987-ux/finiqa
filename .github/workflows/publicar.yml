@@ -1,0 +1,66 @@
+# Publica la calculadora (carpeta web/) en GitHub Pages.
+# - En cada cambio en main: corre las pruebas y publica.
+# - Todos los días (y a mano desde la pestaña Actions): primero actualiza la UF y la UTM desde
+#   mindicador.cl; si hay valores nuevos los guarda en el repositorio, corre las pruebas y publica.
+#   Si mindicador.cl falla, se publica igual con los valores que ya había (respaldo: la tabla del motor).
+name: Publicar
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "15 11 * * *" # todos los días, 08:15 en Chile (verano) / 07:15 (invierno)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Actualizar UF y UTM, probar y publicar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Actualizar UF y UTM desde mindicador.cl
+        id: indicadores
+        if: github.event_name != 'push'
+        continue-on-error: true
+        run: node herramientas/actualizar-indicadores.js
+
+      - name: Guardar los valores nuevos en el repositorio
+        if: github.event_name != 'push' && steps.indicadores.outcome == 'success'
+        run: |
+          if git diff --quiet -- web/datos/indicadores.json; then
+            echo "Sin valores nuevos."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/datos/indicadores.json
+          git commit -m "Actualiza UF y UTM desde mindicador.cl"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Pruebas
+        run: node pruebas/correr-node.js
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: web
+      - name: Publicar en GitHub Pages
+        id: despliegue
+        uses: actions/deploy-pages@v4

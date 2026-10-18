@@ -421,6 +421,13 @@ $('impReview').addEventListener('click', function(e){
   if(e.target.id==='btnImpDesc'){ imp.files=[]; $('impReview').hidden=true; setImpStatus('',''); }
 });
 
+/* ---------- UF y UTM al día ---------- */
+// datos/indicadores.json se actualiza a diario desde mindicador.cl. Si no se puede leer, se usa la tabla incluida en el motor.
+if(typeof fetch==='function' && /^https?:$/.test(location.protocol)){
+  fetch('datos/indicadores.json').then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ if(j && Mo.agregarIndicadores(j)) render(); }).catch(function(){});
+}
+
 /* ---------- App instalable y sin internet ---------- */
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });

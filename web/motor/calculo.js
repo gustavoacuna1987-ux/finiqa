@@ -94,6 +94,26 @@ var PARAMS = {
 var IND = {"uf":{"2024-01":36733.04,"2024-02":36856.5,"2024-03":37093.52,"2024-04":37261.98,"2024-05":37438.91,"2024-06":37571.86,"2024-07":37578.95,"2024-08":37754.47,"2024-09":37910.42,"2024-10":37971.42,"2024-11":38247.92,"2024-12":38416.69,"2025-01":38384.41,"2025-02":38647.94,"2025-03":38894.11,"2025-04":39075.41,"2025-05":39189.45,"2025-06":39267.07,"2025-07":39179.01,"2025-08":39383.07,"2025-09":39485.65,"2025-10":39597.67,"2025-11":39643.59,"2025-12":39727.96,"2026-01":39706.07,"2026-02":39790.63,"2026-03":39841.72,"2026-04":40120.2,"2026-05":40610.69,"2026-06":40820.31,"2026-07":40844.79,"2026-08":40873.77,"2026-09":41057.2,"2026-10":41247.63},"utm":{"2024-12":67294,"2024-11":66628,"2024-10":66561,"2024-09":66362,"2024-08":65901,"2024-07":65967,"2024-06":65770,"2024-05":65443,"2024-04":65182,"2024-03":64793,"2024-02":64343,"2024-01":64666,"2025-12":69542,"2025-11":69542,"2025-10":69265,"2025-09":69265,"2025-08":68647,"2025-07":68923,"2025-06":68785,"2025-05":68648,"2025-04":68306,"2025-03":68034,"2025-02":67294,"2025-01":67429,"2026-11":72440,"2026-10":72151,"2026-09":71721,"2026-08":71649,"2026-07":71649,"2026-06":71506,"2026-05":70588,"2026-04":69889,"2026-03":69889,"2026-02":69611,"2026-01":69751},"ufUltima":["2026-11-09",41295.46]};
 // Ingreso mínimo mensual (trabajadores de 18 a 65 años), con la fecha desde la que rige
 var IMM_HIST = [['2023-05-01',460000],['2024-07-01',500000],['2025-01-01',510500],['2025-05-01',529000],['2026-01-01',539000],['2026-05-01',553553]];
+// Suma a la tabla los valores de datos/indicadores.json (se actualiza a diario desde mindicador.cl).
+// Solo acepta meses "aaaa-mm" y valores dentro de los rangos de PARAMS. Devuelve cuántos valores cambiaron.
+function agregarIndicadores(j){
+  var n=0;
+  if(!j || typeof j!=='object') return 0;
+  ['uf','utm'].forEach(function(tipo){
+    var src=j[tipo], p=PARAMS[tipo];
+    if(!src || typeof src!=='object') return;
+    Object.keys(src).forEach(function(k){
+      var v=src[k];
+      if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(k) || typeof v!=='number' || !(v>=p.min && v<=p.max)) return;
+      if(IND[tipo][k]!==v){ IND[tipo][k]=v; n++; }
+    });
+  });
+  var u=j.ufUltima;
+  if(Array.isArray(u) && /^\d{4}-\d{2}-\d{2}$/.test(u[0]) && typeof u[1]==='number' && u[1]>=PARAMS.uf.min && u[1]<=PARAMS.uf.max && u[0]>IND.ufUltima[0]){
+    IND.ufUltima=[u[0], u[1]]; n++;
+  }
+  return n;
+}
 function mkey(y,m){ var d=new Date(Date.UTC(y,m,1)); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); }
 function hoyUTC(){ var d=new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }
 function mesTxt(k){ var p=k.split('-'); return ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][+p[1]-1]+' '+p[0]; }
@@ -509,7 +529,7 @@ return {
   // lectura de números
   parseMoney:parseMoney, parseSmart:parseSmart, parseDec:parseDec,
   // valores legales
-  calcAuto:calcAuto, conAutomaticos:conAutomaticos, param:param, fallback:fallback, mkey:mkey, mesTxt:mesTxt, hoyUTC:hoyUTC,
+  agregarIndicadores:agregarIndicadores, calcAuto:calcAuto, conAutomaticos:conAutomaticos, param:param, fallback:fallback, mkey:mkey, mesTxt:mesTxt, hoyUTC:hoyUTC,
   // fechas y feriados
   DAY:DAY, parseDate:parseDate, ymdParts:ymdParts, addMonths:addMonths, diff:diff, iso:iso, fecha:fecha, dow:dow, antTxt:antTxt, diasUltimoMes:diasUltimoMes,
   pascua:pascua, feriadosAnio:feriadosAnio, feriadosSet:feriadosSet, habilesACorridos:habilesACorridos,

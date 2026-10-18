@@ -4,7 +4,7 @@
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-2';
+var VERSION = 'finiqa-3';
 var ARCHIVOS = [
   './',
   'index.html',
@@ -14,6 +14,7 @@ var ARCHIVOS = [
   'interfaz.js',
   'motor/calculo.js',
   'motor/lector.js',
+  'datos/indicadores.json',
   'vendor/pdfjs/pdf.min.js',
   'vendor/pdfjs/pdf.worker.min.js',
   'manifest.webmanifest',
