@@ -1,0 +1,27 @@
+# Finiqa: instrucciones para Claude
+
+Calculadora de finiquito para Chile, para personas no expertas. El dueño no programa: Claude construye, prueba y mantiene; el dueño decide. Explica las decisiones en lenguaje simple y en español de Chile.
+
+## Reglas de seguridad (repositorio público)
+- Nunca agregar liquidaciones reales, PDFs con datos personales, claves ni tokens. `.gitignore` bloquea `*.pdf` salvo `pruebas/pdfs-sinteticos/`.
+- `docs/privado/` (contexto de negocio) no se publica.
+- Commits con el correo privado de GitHub ya configurado en el repo.
+- Los datos del usuario se procesan solo en el navegador; no agregar servidores ni analítica que envíe datos personales.
+
+## Reglas del producto
+- No cambiar reglas de cálculo sin avisar al dueño; primero fijar el comportamiento con pruebas.
+- Mantener visibles el aviso de "referencial" y las bases legales en el resultado.
+- `referencia/calculadora_v8.html` es la versión original y la fuente de verdad del comportamiento actual.
+
+## Etapa 1 (en curso)
+1. Proyecto creado y publicado en GitHub (hecho).
+2. Separar el motor de cálculo (módulo puro, sin interfaz) de la interfaz.
+3. Pruebas automáticas que reproducen los resultados de la v8.
+4. Interfaz con el motor, PWA instalable sin internet, rutas relativas (sirven en github.io y en un dominio futuro).
+5. GitHub Actions: pruebas, publicación en GitHub Pages y actualización diaria de UF y UTM (mindicador.cl) con respaldo a la tabla incluida.
+6. Términos, privacidad (Ley 21.719) y metadatos para Google.
+7. Publicar y verificar.
+
+## Entorno
+- Sin Node.js local: las pruebas corren en GitHub Actions y en el navegador (página de pruebas).
+- GitHub CLI en `~/.local/bin/gh`, sesión iniciada como `gustavoacuna1987-ux`.
