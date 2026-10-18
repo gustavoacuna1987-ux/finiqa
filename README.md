@@ -16,6 +16,7 @@ compararlo con la propuesta del empleador antes de firmar.
 | `web/motor/lector.js` | Lector de liquidaciones: reconoce los conceptos del texto de un PDF. |
 | `web/interfaz.js`, `web/index.html`, `web/estilos.css` | La pantalla: formulario y resultado. |
 | `web/vendor/pdfjs/` | pdf.js 3.11.174 (Mozilla, Apache 2.0), para leer PDFs en el navegador. Se carga solo al subir un PDF. |
+| `web/fuentes/` | Tipografía Geist (vercel/geist-font v1.7.2, licencia SIL OFL 1.1), incluida para no pedirla a otros sitios. |
 | `web/manifest.webmanifest`, `web/iconos/` | Nombre, colores e íconos para instalar Finiqa como app (`iconos/icono.svg` es el original). |
 | `web/sw.js` | Service worker: guarda la app en el dispositivo para usarla sin internet. |
 | `referencia/calculadora_v8.html` | Versión original en un solo archivo. Es la fuente de verdad del comportamiento. |

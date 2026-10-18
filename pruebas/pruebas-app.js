@@ -49,10 +49,22 @@ prueba('App instalable', 'El manifiesto tiene nombre e íconos que existen', fun
     return Promise.all(man.icons.map(function(i){ return leer('web/'+i.src).then(function(x){ verdadero(x!=null, 'falta el ícono '+i.src); }); }));
   });
 });
-prueba('Privacidad', 'No se cargan programas de otros sitios', function(){
-  return Promise.all([leer('web/index.html'), leer('web/interfaz.js'), leer('web/sw.js')]).then(function(r){
+prueba('Privacidad', 'No se cargan programas ni tipografías de otros sitios', function(){
+  return Promise.all([leer('web/index.html'), leer('web/interfaz.js'), leer('web/sw.js'), leer('web/estilos.css')]).then(function(r){
     verdadero(!/<script[^>]+src="https?:/.test(r[0]), 'index.html carga un script externo');
-    verdadero(!/cdnjs|jsdelivr|unpkg|googletagmanager|google-analytics/.test(r[0]+r[1]+r[2]), 'hay una referencia a un servicio externo');
+    verdadero(!/<link[^>]+href="https?:/.test(r[0]), 'index.html carga un archivo de otro sitio');
+    verdadero(!/url\(\s*["']?https?:/.test(r[3]), 'estilos.css carga un archivo de otro sitio');
+    verdadero(!/cdnjs|jsdelivr|unpkg|googleapis|gstatic|googletagmanager|google-analytics/.test(r.join('')), 'hay una referencia a un servicio externo');
+  });
+});
+prueba('App instalable', 'Las tipografías incluidas existen y se guardan para usar sin internet', function(){
+  return Promise.all([leer('web/estilos.css'), archivosOffline()]).then(function(r){
+    var urls=(r[0].match(/url\("([^"]+)"\)/g)||[]).map(function(u){ return u.slice(5,-2); });
+    verdadero(urls.length>=2, 'estilos.css debe declarar las tipografías');
+    return Promise.all(urls.map(function(u){
+      verdadero(r[1].indexOf(u)>=0, u+' no está en la lista de sw.js');
+      return leer('web/'+u).then(function(t){ verdadero(t!=null, 'falta web/'+u); });
+    }));
   });
 });
 })(typeof self!=='undefined' ? self : globalThis);

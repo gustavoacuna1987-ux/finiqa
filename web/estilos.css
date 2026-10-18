@@ -1,5 +1,9 @@
 /* Layout: pasos del formulario a la izquierda; a la derecha, la "boleta" del finiquito fija mientras completas.
    En móvil la boleta baja y una barra fija muestra el total. Tipografía sans corporativa con cifras tabulares. */
+/* Tipografía Geist incluida en la app (vercel/geist-font v1.7.2, licencia SIL OFL 1.1: fuentes/LICENCIA-OFL.txt).
+   Se sirve desde aquí mismo: no se pide a ningún otro sitio. */
+@font-face{font-family:"Geist";src:url("fuentes/Geist-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url("fuentes/GeistMono-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
 :root{
   --bg:#EFF2F6; --surface:#FFFFFF; --sunken:#F6F8FA; --ink:#14202E; --muted:#556275;
   --line:#D6DDE6; --line-strong:#AFBACA;
