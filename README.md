@@ -17,3 +17,17 @@ compararlo con la propuesta del empleador antes de firmar.
 | `web/interfaz.js`, `web/index.html`, `web/estilos.css` | La pantalla: formulario y resultado. |
 | `web/vendor/pdfjs/` | pdf.js 3.11.174 (Mozilla, Apache 2.0), para leer PDFs en el navegador. |
 | `referencia/calculadora_v8.html` | Versión original en un solo archivo. Es la fuente de verdad del comportamiento. |
+| `pruebas/` | Pruebas automáticas: casos, resultados esperados de la v8 y PDFs sintéticos. |
+
+## Pruebas
+
+Las pruebas revisan que el motor y el lector den exactamente lo mismo que la v8 original:
+72 casos (causales, fracción de 6 meses, menos de un año, fin de obra, vacaciones, UTM y descuentos,
+comparación con la propuesta) y 6 lecturas de liquidaciones en PDF con datos inventados.
+
+- **En GitHub:** corren solas en cada cambio (pestaña *Actions*), en Node y en Chrome.
+- **En el navegador:** abre `pruebas/index.html` desde un servidor. En local:
+  `python3 pruebas/servidor-local.py` y luego http://localhost:8642/pruebas/.
+  El botón *Comparar con la v8 original* abre la v8 y la nueva pantalla de forma invisible y compara cada caso.
+- `pruebas/esperados.js` se genera con el botón *Generar resultados esperados desde la v8*; no se edita a mano.
+- `pruebas/pdfs-sinteticos/generar.py` crea los PDFs de ejemplo.

@@ -4,7 +4,7 @@
     {
       "name": "finiqa",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8642", "--bind", "127.0.0.1"],
+      "runtimeArgs": ["-I", "pruebas/servidor-local.py"],
       "port": 8642
     }
   ]

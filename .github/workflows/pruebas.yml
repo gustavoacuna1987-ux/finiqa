@@ -1,0 +1,44 @@
+# Corre las pruebas de Finiqa en cada cambio.
+# 1) Node: motor de cálculo y lector de PDFs contra los resultados esperados de la v8.
+# 2) Chrome: la página de pruebas completa, incluida la comparación en vivo con la v8 original.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Motor y lector (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Correr pruebas
+        run: node pruebas/correr-node.js
+
+  navegador:
+    name: Navegador y comparación con la v8 (Chrome)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Correr la página de pruebas en Chrome
+        run: |
+          python3 pruebas/servidor-local.py &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8642/pruebas/index.html > /dev/null && break; sleep 0.5; done
+          google-chrome --headless=new --no-sandbox --disable-gpu --no-first-run \
+            --virtual-time-budget=120000 --dump-dom "http://127.0.0.1:8642/pruebas/index.html?vivo=1" > dom.html 2> chrome.log || true
+          sed -n '/<pre id="ci">/,/<\/pre>/p' dom.html
+          if ! grep -q '<pre id="ci">OK' dom.html; then
+            echo "Las pruebas en el navegador fallaron o no terminaron."
+            grep -o 'class="resumen[^"]*">[^<]*' dom.html || true
+            tail -n 20 chrome.log || true
+            exit 1
+          fi

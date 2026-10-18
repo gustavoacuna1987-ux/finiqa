@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pruebas de Finiqa</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16202c;--muted:#5b6675;--line:#dfe3e8;--ok:#13795b;--okbg:#e7f5ef;--bad:#b42318;--badbg:#fdecea;--accent:#2152c4}
+@media (prefers-color-scheme: dark){:root{--bg:#11161d;--card:#18202a;--ink:#e8edf3;--muted:#9aa6b4;--line:#2a3542;--ok:#4cc79a;--okbg:#14302a;--bad:#ff8a80;--badbg:#3a1d1d;--accent:#8fb0ff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:24px;margin:0 0 4px}
+h2{font-size:18px;margin:32px 0 8px}
+p{margin:6px 0}
+.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.resumen{font-size:18px;font-weight:600;padding:14px 16px;border-radius:10px;margin:16px 0}
+.resumen.ok{background:var(--okbg);color:var(--ok)}
+.resumen.bad{background:var(--badbg);color:var(--bad)}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.grupo{margin:14px 0 4px;font-weight:600}
+ul.res{list-style:none;margin:0;padding:0}
+ul.res li{padding:6px 0;border-top:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
+ul.res li:first-child{border-top:0}
+.m{flex:0 0 auto;width:20px;text-align:center;font-weight:700}
+.ok .m{color:var(--ok)} .bad .m{color:var(--bad)}
+.err{color:var(--bad);font-size:13px;margin-top:2px;overflow-wrap:anywhere}
+details.dif{font-size:12px;margin-top:4px}
+details.dif pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);padding:8px;border-radius:6px;max-height:300px;overflow:auto}
+textarea{width:100%;min-height:160px;font:12px ui-monospace,Menlo,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+iframe.v8{width:1px;height:1px;border:0;position:absolute;left:-9999px}
+.acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pruebas de Finiqa</h1>
+  <p class="muted">Revisan que el motor de cálculo y el lector de liquidaciones den exactamente los mismos resultados que la versión original (v8). Se corren solas al abrir esta página; también corren en GitHub cada vez que se sube un cambio.</p>
+  <p class="muted" id="avisoArchivo" hidden>Abriste esta página directamente como archivo: las pruebas de PDFs y la comparación en vivo necesitan abrirla desde un servidor (por ejemplo, la versión publicada).</p>
+
+  <div id="resumen" class="resumen">Corriendo pruebas…</div>
+  <div id="lista" class="card"></div>
+
+  <h2>Comparación en vivo con la v8 original</h2>
+  <div class="card">
+    <p>Abre la v8 original (y la nueva pantalla) de forma invisible, llena cada caso como lo haría una persona y compara lo que muestran con lo que calcula el motor, incluidas las explicaciones de cada línea.</p>
+    <div class="acciones">
+      <button type="button" class="primary" id="btnV8">Comparar con la v8 original</button>
+      <button type="button" id="btnNueva">Comparar con la nueva pantalla</button>
+      <button type="button" id="btnGenerar">Generar resultados esperados desde la v8</button>
+    </div>
+    <div id="vivo"></div>
+    <textarea id="salida" hidden readonly></textarea>
+  </div>
+</div>
+
+<script>
+// Carga los archivos siempre frescos (sin copias guardadas del navegador), en orden, y después corre las pruebas.
+(function(){
+  var v='?t='+Date.now();
+  var lista=['../web/vendor/pdfjs/pdf.min.js','../web/vendor/pdfjs/pdf.worker.min.js',
+    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v];
+  function sig(i){
+    if(i>=lista.length){ window.iniciarPruebas(); return; }
+    var s=document.createElement('script'); s.src=lista[i];
+    s.onload=function(){ sig(i+1); };
+    s.onerror=function(){ document.getElementById('resumen').className='resumen bad'; document.getElementById('resumen').textContent='No se pudo cargar '+lista[i].split('?')[0]; };
+    document.body.appendChild(s);
+  }
+  window.addEventListener('DOMContentLoaded', function(){ sig(0); });
+})();
+</script>
+<script>
+window.iniciarPruebas=function(){
+'use strict';
+var $=function(id){ return document.getElementById(id); };
+var C=window.FiniqaCasos, Res=window.FiniqaResultado;
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+if(location.protocol==='file:') $('avisoArchivo').hidden=false;
+if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc='../web/vendor/pdfjs/pdf.worker.min.js';
+window.FiniqaEntorno={
+  pdfjs:window.pdfjsLib,
+  leerPdf:function(n){ return fetch('pdfs-sinteticos/'+n).then(function(r){ if(!r.ok) throw new Error('No se encontró '+n); return r.arrayBuffer(); }).then(function(b){ return new Uint8Array(b); }); }
+};
+
+function itemHtml(r){
+  var h='<li class="'+(r.ok?'ok':'bad')+'"><span class="m">'+(r.ok?'✓':'✗')+'</span><div>'+esc(r.nombre);
+  if(!r.ok){
+    h+='<div class="err">'+esc(r.error)+'</div>';
+    if(r.detalle) h+='<details class="dif"><summary>Ver diferencias</summary><pre>'+esc(r.detalle.slice(0,20).map(function(d){ return d.ruta+'\n  v8:    '+JSON.stringify(d.esperado)+'\n  motor: '+JSON.stringify(d.obtenido); }).join('\n'))+'</pre></details>';
+  }
+  return h+'</div></li>';
+}
+function mostrar(contenedor, res){
+  var h='', g=null;
+  res.forEach(function(r){
+    if(r.grupo!==g){ if(g!==null) h+='</ul>'; g=r.grupo; h+='<p class="grupo">'+esc(g)+'</p><ul class="res">'; }
+    h+=itemHtml(r);
+  });
+  contenedor.innerHTML=h+(res.length?'</ul>':'');
+}
+function resumen(el, res, que){
+  var malas=res.filter(function(r){ return !r.ok; }).length;
+  el.className='resumen '+(malas?'bad':'ok');
+  el.textContent = malas ? malas+' de '+res.length+' '+que+' fallaron.' : 'Todo bien: '+res.length+' de '+res.length+' '+que+' pasaron.';
+}
+
+// Pruebas automáticas
+var hechas=[];
+window.Pruebas.correr(function(r){ hechas.push(r); $('resumen').textContent='Corriendo pruebas… '+hechas.length+' de '+window.Pruebas.lista.length; })
+  .then(function(res){
+    mostrar($('lista'), res); resumen($('resumen'), res, 'pruebas'); window.resultadoPruebas=res;
+    // Modo automático (?vivo=1): también compara en vivo con la v8 y con la nueva pantalla, y deja el veredicto en #ci (lo lee GitHub Actions).
+    if(!/[?&]vivo=1/.test(location.search)) return;
+    var malas=res.filter(function(r){ return !r.ok; }).length, lineas=['Pruebas automáticas: '+(res.length-malas)+'/'+res.length];
+    return comparar('../referencia/calculadora_v8.html', 'la v8 original').then(function(v){
+      malas+=v.filter(function(r){ return !r.ok; }).length; lineas.push('Comparación con la v8: '+v.filter(function(r){ return r.ok; }).length+'/'+v.length);
+      return comparar('../web/index.html', 'la nueva pantalla');
+    }).then(function(v){
+      malas+=v.filter(function(r){ return !r.ok; }).length; lineas.push('Comparación con la nueva pantalla: '+v.filter(function(r){ return r.ok; }).length+'/'+v.length);
+      var ci=document.createElement('pre'); ci.id='ci'; ci.textContent=(malas?'FALLA':'OK')+'\n'+lineas.join('\n');
+      document.body.appendChild(ci);
+    });
+  });
+
+// Comparación en vivo
+function abrir(url){
+  return new Promise(function(res, rej){
+    var f=document.createElement('iframe'); f.className='v8'; f.src=url+'?t='+Date.now();
+    f.onload=function(){ setTimeout(function(){ res(f); }, 200); };
+    f.onerror=rej; document.body.appendChild(f);
+  });
+}
+function leerArchivos(nombres){
+  return Promise.all(nombres.map(function(n){ return window.FiniqaEntorno.leerPdf(n).then(function(d){ return {name:n, data:d}; }); }));
+}
+// Corre todos los casos en una pantalla. Devuelve {calculo:{id:resultado}, pdfs:{id:resultado}}.
+function capturar(url, avance){
+  return abrir(url).then(function(f){
+    var w=f.contentWindow, out={calculo:{}, pdfs:{}};
+    C.calculo.forEach(function(caso){ Res.aplicarCaso(w, caso); out.calculo[caso.id]=Res.desdePantalla(w.document); });
+    return C.pdfs.reduce(function(p, caso){
+      return p.then(function(){
+        avance('Leyendo PDFs: '+caso.nombre);
+        return Res.importarEnPantalla(w, caso.archivos.map(function(n){ return location.href.replace(/[^\/]*$/,'')+'pdfs-sinteticos/'+n; }))
+          .then(function(r){ out.pdfs[caso.id]=r; });
+      });
+    }, Promise.resolve()).then(function(){ f.remove(); return out; });
+  });
+}
+function botones(on){ ['btnV8','btnNueva','btnGenerar'].forEach(function(id){ $(id).disabled=!on; }); }
+function comparar(url, titulo){
+  botones(false); $('salida').hidden=true;
+  var V=$('vivo'); V.innerHTML='<p class="muted">Comparando con '+titulo+'…</p>';
+  return capturar(url, function(t){ V.innerHTML='<p class="muted">'+esc(t)+'…</p>'; }).then(function(pant){
+    var res=C.calculo.map(function(caso){
+      var d=Res.diferencias(pant.calculo[caso.id], Res.calcularCaso(caso, C.HOY));
+      return {grupo:caso.grupo, nombre:caso.nombre, ok:!d.length, error:d.length?d.length+' diferencia(s)':'', detalle:d};
+    });
+    return C.pdfs.reduce(function(p, caso){
+      return p.then(function(){ return leerArchivos(caso.archivos); }).then(function(lista){ return Res.importarConMotor(window.pdfjsLib, lista); }).then(function(obt){
+        var d=Res.diferencias(pant.pdfs[caso.id], obt);
+        res.push({grupo:'Lectura de PDFs sintéticos', nombre:caso.nombre, ok:!d.length, error:d.length?d.length+' diferencia(s)':'', detalle:d});
+      });
+    }, Promise.resolve()).then(function(){
+      V.innerHTML='<div class="resumen"></div><div></div>';
+      resumen(V.firstChild, res, 'casos comparados con '+titulo);
+      mostrar(V.lastChild, res);
+      window.resultadoVivo=res;
+      return res;
+    });
+  }).catch(function(e){ V.innerHTML='<p class="err">No se pudo comparar: '+esc(e.message)+'</p>'; return [{ok:false}]; }).then(function(res){ botones(true); return res; });
+}
+$('btnV8').addEventListener('click', function(){ comparar('../referencia/calculadora_v8.html', 'la v8 original'); });
+$('btnNueva').addEventListener('click', function(){ comparar('../web/index.html', 'la nueva pantalla'); });
+$('btnGenerar').addEventListener('click', function(){
+  botones(false);
+  var V=$('vivo'); V.innerHTML='<p class="muted">Leyendo la v8…</p>';
+  capturar('../referencia/calculadora_v8.html', function(t){ V.innerHTML='<p class="muted">'+esc(t)+'…</p>'; }).then(function(out){
+    var js='/* Finiqa · Resultados esperados, tal como los muestra la v8 original (referencia/calculadora_v8.html).\n'+
+      ' * Generado con el botón "Generar resultados esperados desde la v8" de pruebas/index.html. No editar a mano. */\n'+
+      '(function(root){\nvar E = '+JSON.stringify(out, null, 1)+';\n'+
+      "if(typeof module==='object' && module.exports) module.exports=E; else root.FiniqaEsperados=E;\n})(typeof self!=='undefined' ? self : this);\n";
+    $('salida').value=js; $('salida').hidden=false; window.esperadosGenerados=js;
+    V.innerHTML='<p>Listo: copia este texto en <code>pruebas/esperados.js</code>.</p>';
+  }).catch(function(e){ V.innerHTML='<p class="err">No se pudo generar: '+esc(e.message)+'</p>'; }).then(function(){ botones(true); });
+});
+};
+</script>
+</body>
+</html>
