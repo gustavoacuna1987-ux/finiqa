@@ -1,0 +1,12 @@
+# Seguridad: nunca subir liquidaciones ni documentos con datos personales
+*.pdf
+!pruebas/pdfs-sinteticos/*.pdf
+privado/
+datos-reales/
+
+# Sistema
+.DS_Store
+node_modules/
+
+# Documentos internos de negocio (no se publican)
+docs/privado/
