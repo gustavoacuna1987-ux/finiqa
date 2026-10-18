@@ -62,7 +62,7 @@ iframe.v8{width:1px;height:1px;border:0;position:absolute;left:-9999px}
 (function(){
   var v='?t='+Date.now();
   var lista=['../web/vendor/pdfjs/pdf.min.js','../web/vendor/pdfjs/pdf.worker.min.js',
-    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v];
+    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-app.js'+v];
   function sig(i){
     if(i>=lista.length){ window.iniciarPruebas(); return; }
     var s=document.createElement('script'); s.src=lista[i];
@@ -83,7 +83,8 @@ if(location.protocol==='file:') $('avisoArchivo').hidden=false;
 if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc='../web/vendor/pdfjs/pdf.worker.min.js';
 window.FiniqaEntorno={
   pdfjs:window.pdfjsLib,
-  leerPdf:function(n){ return fetch('pdfs-sinteticos/'+n).then(function(r){ if(!r.ok) throw new Error('No se encontró '+n); return r.arrayBuffer(); }).then(function(b){ return new Uint8Array(b); }); }
+  leerPdf:function(n){ return fetch('pdfs-sinteticos/'+n).then(function(r){ if(!r.ok) throw new Error('No se encontró '+n); return r.arrayBuffer(); }).then(function(b){ return new Uint8Array(b); }); },
+  leerTexto:function(r){ return fetch('../'+r, {cache:'no-store'}).then(function(x){ return x.ok ? x.text() : null; }, function(){ return null; }); }
 };
 
 function itemHtml(r){

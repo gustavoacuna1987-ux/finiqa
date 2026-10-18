@@ -16,10 +16,12 @@ globalThis.FiniqaEsperados = require('./esperados.js');
 globalThis.FiniqaResultado = require('./resultado.js');
 globalThis.FiniqaEntorno = {
   pdfjs: pdfjsLib,
-  leerPdf: function(n){ return Promise.resolve(new Uint8Array(fs.readFileSync(path.join(__dirname, 'pdfs-sinteticos', n)))); }
+  leerPdf: function(n){ return Promise.resolve(new Uint8Array(fs.readFileSync(path.join(__dirname, 'pdfs-sinteticos', n)))); },
+  leerTexto: function(r){ var f = path.join(__dirname, '..', r); return Promise.resolve(fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null); }
 };
 require('./pruebas-motor.js');
 require('./pruebas-lector.js');
+require('./pruebas-app.js');
 
 var grupo = null;
 Pruebas.correr(function(r){

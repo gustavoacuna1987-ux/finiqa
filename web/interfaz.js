@@ -250,7 +250,8 @@ if('IntersectionObserver' in window){
 }
 
 /* ---------- Cargar liquidación de sueldo (PDF, se lee en el navegador) ---------- */
-var PDFJS_CDN='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+// pdf.js (Mozilla, Apache 2.0) viene incluido en la app y se carga solo al subir el primer PDF.
+var PDFJS='vendor/pdfjs/';
 function loadScript(src){
   return new Promise(function(res,rej){
     var s=document.createElement('script'); s.src=src;
@@ -262,11 +263,11 @@ var pdfReady=null;
 function getPdfJs(){
   if(!pdfReady){
     pdfReady=Promise.resolve()
-      .then(function(){ return window.pdfjsLib ? null : loadScript(PDFJS_CDN+'pdf.min.js'); })
-      .then(function(){ return window.pdfjsWorker ? null : loadScript(PDFJS_CDN+'pdf.worker.min.js'); })
+      .then(function(){ return window.pdfjsLib ? null : loadScript(PDFJS+'pdf.min.js'); })
+      .then(function(){ return window.pdfjsWorker ? null : loadScript(PDFJS+'pdf.worker.min.js'); })
       .then(function(){
         var L=window.pdfjsLib; if(!L || !window.pdfjsWorker) throw new Error('nolib');
-        L.GlobalWorkerOptions.workerSrc=PDFJS_CDN+'pdf.worker.min.js';
+        L.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
         return L;
       });
     pdfReady.catch(function(){ pdfReady=null; });
@@ -312,7 +313,7 @@ function processQueue(){
     .catch(function(e){
       if(e && e.name==='PasswordException'){ askPwd(q, e.code===2); return; }
       imp.queue.shift();
-      if(e && e.code==='lib'){ imp.queue=[]; setImpStatus('No se pudo cargar el lector de PDF. Revisa tu conexión a internet e inténtalo de nuevo.','bad'); return; }
+      if(e && e.code==='lib'){ imp.queue=[]; setImpStatus('No se pudo cargar el lector de PDF. Recarga la página e inténtalo de nuevo.','bad'); return; }
       imp.errors.push('No se pudo leer “'+esc(name)+'”. Puede estar dañado.');
       processQueue();
     });
@@ -419,6 +420,23 @@ $('impReview').addEventListener('click', function(e){
   if(e.target.id==='btnImpUsar') applyImport();
   if(e.target.id==='btnImpDesc'){ imp.files=[]; $('impReview').hidden=true; setImpStatus('',''); }
 });
+
+/* ---------- App instalable y sin internet ---------- */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+var instalarEv=null;
+var instalada=(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone===true;
+if(instalada) $('instalarHint').hidden=true;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault(); instalarEv=e; $('btnInstalar').hidden=false;
+});
+$('btnInstalar').addEventListener('click', function(){
+  if(!instalarEv) return;
+  instalarEv.prompt();
+  instalarEv.userChoice.then(function(){ instalarEv=null; $('btnInstalar').hidden=true; }, function(){});
+});
+window.addEventListener('appinstalled', function(){ instalarEv=null; $('btnInstalar').hidden=true; $('instalarHint').hidden=true; showToastNear('Listo: Finiqa quedó instalada.'); });
 
 /* ---------- Inicio ---------- */
 var saved=load();

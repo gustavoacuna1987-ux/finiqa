@@ -1,0 +1,78 @@
+/* Finiqa · Service worker: guarda la calculadora en el dispositivo para usarla sin internet.
+ * - Archivos propios: primero se piden a la red (así siempre llega la versión nueva) y, si no hay
+ *   conexión o tarda más de 4 segundos, se usa la copia guardada.
+ * - Fuentes tipográficas de Google: se guardan la primera vez y después se usan desde la copia.
+ * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
+ * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
+'use strict';
+var VERSION = 'finiqa-1';
+var FUENTES = 'finiqa-fuentes';
+var ARCHIVOS = [
+  './',
+  'index.html',
+  'estilos.css',
+  'interfaz.js',
+  'motor/calculo.js',
+  'motor/lector.js',
+  'vendor/pdfjs/pdf.min.js',
+  'vendor/pdfjs/pdf.worker.min.js',
+  'manifest.webmanifest',
+  'iconos/icono.svg',
+  'iconos/icono-192.png',
+  'iconos/icono-512.png',
+  'iconos/icono-maskable-512.png',
+  'iconos/apple-touch-icon.png',
+  'iconos/favicon-32.png'
+];
+var ESPERA_RED = 4000;
+
+self.addEventListener('install', function(e){
+  e.waitUntil(caches.open(VERSION).then(function(c){ return c.addAll(ARCHIVOS); }).then(function(){ return self.skipWaiting(); }));
+});
+
+self.addEventListener('activate', function(e){
+  e.waitUntil(caches.keys().then(function(ks){
+    return Promise.all(ks.filter(function(k){ return k.indexOf('finiqa-')===0 && k!==VERSION && k!==FUENTES; }).map(function(k){ return caches.delete(k); }));
+  }).then(function(){ return self.clients.claim(); }));
+});
+
+self.addEventListener('fetch', function(e){
+  var req=e.request;
+  if(req.method!=='GET') return;
+  var url=new URL(req.url);
+  if(url.origin===self.location.origin){ e.respondWith(redPrimero(req, url)); return; }
+  if(url.hostname==='fonts.googleapis.com' || url.hostname==='fonts.gstatic.com') e.respondWith(copiaPrimero(req));
+});
+
+// Copia guardada de un archivo propio (sin mirar "?..." de la dirección). Las páginas caen en index.html.
+function copia(req){
+  return caches.match(req, {ignoreSearch:true}).then(function(r){
+    return r || (req.mode==='navigate' ? caches.match('index.html') : undefined);
+  });
+}
+function redPrimero(req, url){
+  return new Promise(function(resolve){
+    var listo=false;
+    function responder(r){ if(!listo && r){ listo=true; resolve(r); } }
+    var t=setTimeout(function(){ copia(req).then(responder); }, ESPERA_RED);
+    fetch(req).then(function(res){
+      clearTimeout(t);
+      if(res.ok && res.type==='basic'){
+        var c=res.clone();
+        caches.open(VERSION).then(function(cache){ return cache.put(url.origin+url.pathname, c); });
+      }
+      responder(res);
+    }).catch(function(){
+      clearTimeout(t);
+      copia(req).then(function(r){ responder(r || Response.error()); });
+    });
+  });
+}
+function copiaPrimero(req){
+  return caches.match(req).then(function(r){
+    return r || fetch(req).then(function(res){
+      if(res.ok || res.type==='opaque'){ var c=res.clone(); caches.open(FUENTES).then(function(cache){ return cache.put(req, c); }); }
+      return res;
+    });
+  });
+}
