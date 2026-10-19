@@ -41,6 +41,12 @@ prueba('Lectura de fotos (prototipo)', 'Junta en una fila las columnas que el OC
   igual(rows.map(function(r){ return r.text; }), ['HABERES DESCUENTOS', 'Sueldo base 650.000 AFP 138.540', 'Colación 45.000 Salud 91.665']);
   igual(rows[1].tokens[0].x, 100*595/1400);
 });
+prueba('Lectura de fotos (prototipo)', 'Conserva montos pegados al borde de una tabla aunque el OCR dude', function(){
+  // Caso real: el monto quedó junto a la línea del cuadro y el OCR lo entregó como "231.250|" con confianza 0.
+  var w=function(t, x, conf){ return {t:t, x0:x, y0:100, x1:x+t.length*14, y1:128, conf:conf, linea:'1.1.1'}; };
+  var rows=Cam.filasDesdePalabras([w('Gratificación',40,93), w('legal',230,92), w('4.75',480,95), w('231.250|',640,0), w('|',780,0), w('“Total',900,60), w('imponibles',1000,1), w('Ne',1200,3)], 1400, 0);
+  igual(rows[0].text, 'Gratificación legal 4.75 231.250 Total imponibles');
+});
 prueba('Lectura de fotos (prototipo)', 'Lee los montos de una propuesta de finiquito en PDF', function(){
   return filasPdf('finiquito-propuesta.pdf').then(function(rows){
     var R=Cam.leerFiniquito(rows);

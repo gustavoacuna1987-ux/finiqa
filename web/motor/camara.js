@@ -52,7 +52,12 @@ function mediana(a){ if(!a.length) return 0; var b=a.slice().sort(function(x,y){
 // sus líneas cuando quedan a la misma altura (corrigiendo la inclinación que quede en la foto).
 // palabras: [{t, x0, y0, x1, y1, conf, linea}], ancho: ancho de la imagen en píxeles, pagina: número de hoja.
 function filasDesdePalabras(palabras, ancho, pagina){
-  var ws=palabras.filter(function(w){ return w.conf>=15 && /[0-9a-záéíóúñ$%]/i.test(w.t); });
+  // Los bordes de las tablas y comillas sueltas pegados a una palabra ("231.250|", "[Total", "“Total") se quitan. Los montos y
+  // las palabras de 4 letras o más se conservan aunque el OCR dude: a veces las lee bien con confianza casi cero (por un borde
+  // vecino o por la letra negrita). Lo que se descarta por baja confianza son restos cortos ("q", "Ne").
+  var RE_PALABRA=/^[a-záéíóúüñ]{4,}[.:,]?$/i;
+  var ws=palabras.map(function(w){ var o={}; for(var k in w) o[k]=w[k]; o.t=w.t.replace(/^[|\[\]{}“”"'‘’«»]+|[|\[\]{}“”"'‘’«»]+$/g,''); return o; })
+    .filter(function(w){ return /[0-9a-záéíóúñ$%]/i.test(w.t) && (w.conf>=15 || RE_PALABRA.test(w.t) || RE_MONEY.test(Lx.cleanTok(arreglarToken(w.t)))); });
   if(!ws.length) return [];
   var H=mediana(ws.map(function(w){ return w.y1-w.y0; })) || 10;
   // Líneas de Tesseract con su inclinación

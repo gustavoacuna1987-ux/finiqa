@@ -23,7 +23,7 @@ from PIL import Image, ImageFilter
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
 CHROME = os.environ.get('CHROME', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-PDFS = ['liquidacion-simple.pdf', 'liquidacion-dos-columnas.pdf', 'liquidacion-mes-parcial.pdf', 'finiquito-propuesta.pdf']
+PDFS = ['liquidacion-simple.pdf', 'liquidacion-dos-columnas.pdf', 'liquidacion-mes-parcial.pdf', 'finiquito-propuesta.pdf', 'liquidacion-tabla.pdf']
 
 
 def renderizar():
@@ -62,7 +62,7 @@ def perspectiva(img, fuerza, rnd):
     return img.transform((w, h), Image.PERSPECTIVE, tuple(coef), Image.BICUBIC, fillcolor=(90, 85, 80))
 
 
-def foto(img, ancho, giro, persp, sombra, ruido, desenfoque, calidad, semilla, dura=0.0):
+def foto(img, ancho, giro, persp, sombra, ruido, desenfoque, calidad, semilla, dura=0.0, vineta=0.0):
     rnd = random.Random(semilla)
     # Papel un poco amarillento y la mesa alrededor
     a = np.asarray(img).astype(np.float32)
@@ -87,6 +87,11 @@ def foto(img, ancho, giro, persp, sombra, ruido, desenfoque, calidad, semilla, d
         m = ((xx / w) * 0.8 + (yy / h) > 1.0).astype(np.float32)
         m = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(w / 150))) / 255.0
         a = a * (1 - dura * m[..., None])
+    if vineta:
+        # Luz despareja como en una foto real: papel grisáceo, más oscuro hacia las orillas y un costado
+        yy, xx = np.mgrid[0:h, 0:w]
+        r2 = ((xx / w - 0.45) ** 2 + (yy / h - 0.4) ** 2) / 0.5
+        a = a * (1 - vineta * np.clip(r2, 0, 1)[..., None]) * 0.86
     if ruido:
         a = a + np.random.default_rng(semilla).normal(0, ruido, a.shape)
     img = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
@@ -103,6 +108,7 @@ VARIANTES = [
     ('sombra', 1600, -3.0, 0.03, 0.45, 7, 0.8, 75),   # inclinada, de lado y con sombra
     ('baja', 1000, 2.5, 0.02, 0.15, 6, 1.0, 60),      # poca resolución y mucha compresión
     ('dura', 1500, -2.0, 0.02, 0.2, 6, 0.7, 75, 0.55),  # sombra de borde marcado sobre parte de la hoja
+    ('real', 1500, 0.8, 0.015, 0.0, 5, 1.1, 80, 0.0, 0.45),  # papel gris, luz despareja y algo borrosa (como una foto real)
 ]
 
 if __name__ == '__main__':
@@ -110,7 +116,7 @@ if __name__ == '__main__':
     for i, (nombre, img) in enumerate(imagenes.items()):
         base = nombre[:-4]
         for j, v in enumerate(VARIANTES):
-            datos = foto(img, *v[1:8], semilla=100 * i + j, dura=v[8] if len(v) > 8 else 0.0)
+            datos = foto(img, *v[1:8], semilla=100 * i + j, dura=v[8] if len(v) > 8 else 0.0, vineta=v[9] if len(v) > 9 else 0.0)
             ruta = os.path.join(AQUI, '%s-%s.jpg' % (base, v[0]))
             with open(ruta, 'wb') as fh:
                 fh.write(datos)

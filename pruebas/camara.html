@@ -41,16 +41,17 @@ small{color:var(--muted)}
 'use strict';
 var Lx=FiniqaLector, Cam=FiniqaCamara, Foto=FiniqaFoto, Mo=FiniqaMotor;
 pdfjsLib.GlobalWorkerOptions.workerSrc='../web/vendor/pdfjs/pdf.worker.min.js';
-var DOCS=['liquidacion-simple','liquidacion-dos-columnas','liquidacion-mes-parcial','finiquito-propuesta'];
-var VARIANTES=['buena','sombra','baja','dura'];
+var DOCS=['liquidacion-simple','liquidacion-dos-columnas','liquidacion-mes-parcial','liquidacion-tabla','finiquito-propuesta'];
+var VARIANTES=['buena','sombra','baja','dura','real'];
 var q=new URLSearchParams(location.search);
 
-// Para experimentar: ?unavez=1 (sin segundo intento), ?max=3000, ?agrandar=0, ?psm=6, ?umbral=2 (Sauvola), ?docs=...&variantes=...
+// Para experimentar: ?unavez=1 (sin segundo intento), ?lineas=1 (sin borrar líneas), ?max=3000, ?agrandar=0, ?psm=6, ?umbral=2 (Sauvola), ?docs=...&variantes=...
 function opcionesUrl(doc){
   var o={parametros:{}};
   if(!q.get('unavez')) o.validar = /^finiquito/.test(doc) ? function(rows){ return Cam.leerFiniquito(rows).cuadra===true; } : Foto.liquidacionCuadra;
   if(q.get('max')) o.maxLado=+q.get('max');
   if(q.get('agrandar')==='0') o.agrandar=false;
+  if(q.get('lineas')==='1') o.conLineas=true;
   if(q.get('psm')) o.parametros.tessedit_pageseg_mode=q.get('psm');
   if(q.get('umbral')) o.parametros.thresholding_method=q.get('umbral');
   return o;

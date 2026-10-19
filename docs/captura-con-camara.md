@@ -8,8 +8,10 @@ Informe para el dueño · 18-10-2026 · rama `claude/captura-camara-13b5f4`
 Tesseract.js (un lector de texto gratuito, licencia Apache 2.0). No se envía a ningún servidor y,
 después del primer uso, funciona sin internet.
 
-En 16 fotos de prueba (4 documentos inventados × 4 tipos de foto) se llenaron bien
-**159 de 160 campos (99 %)** y se leyeron bien **118 de 120 conceptos con su monto (98 %)**.
+En 25 fotos de prueba (5 documentos inventados × 5 tipos de foto) se llenaron bien
+**251 de 255 campos (98 %)** y se leyeron bien **178 de 180 conceptos con su monto (98 %)**.
+En la primera prueba del dueño con un iPhone y una liquidación real faltó la gratificación y tardó más
+de un minuto; ver «Prueba con un iPhone real» más abajo.
 
 **Recomendación:** incluirlo como opción secundaria («Tomar una foto»), dejando el PDF como camino
 principal, y siempre con la pantalla de revisión que ya existe. Leer también la propuesta de finiquito
@@ -21,14 +23,16 @@ principal, y siempre con la pantalla de revisión que ya existe. Leer también l
    archivos normal del teléfono (`<input type="file" capture>`): abre la cámara en iPhone y Android y
    no pide permisos especiales. Descarté `getUserMedia` (video en vivo): pide permiso de cámara,
    requiere más pantalla y no mejora la lectura.
-2. La foto se ajusta a unos 2.400 píxeles (se achica si es grande y se agranda si es chica).
+2. La foto se ajusta a unos 2.400 píxeles (se achica si es grande y se agranda si es chica) y se
+   borran las líneas de las tablas (bordes de cuadros), que el lector confundía con letras.
 3. Tesseract lee las palabras y su posición. `web/motor/camara.js` las ordena en filas iguales a las
    que entrega el lector de PDF, corrigiendo la inclinación y errores típicos (O en vez de 0, coma en
    vez de punto, «650 000» en vez de «650.000»).
 4. Esas filas pasan por **el mismo lector de liquidaciones de siempre** (`parseLiq`), sin cambiar sus
    reglas, y llegan a la misma pantalla de revisión.
-5. Si la suma no cuadra con el total del documento, se lee la foto otra vez con otro método de blanco
-   y negro (mejor con sombras marcadas) y se queda con la lectura que cuadra.
+5. Se lee con el método de blanco y negro «Sauvola», que compara cada punto con su entorno y aguanta
+   la luz despareja de las fotos reales. Si la suma no cuadra con el total del documento, se lee otra vez
+   con el método global y se queda con la lectura que cuadra.
 
 ## Resultados con fotos de prueba (datos inventados)
 
@@ -41,6 +45,10 @@ Las fotos salen de los PDFs sintéticos de `pruebas/pdfs-sinteticos/`, con defec
 | Con sombra | inclinada 3°, de lado, sombra suave | 40 de 40 |
 | Baja calidad | 1.000 px, borrosa, muy comprimida (como reenviada por WhatsApp) | 39 de 40 |
 | Sombra marcada | sombra con borde que tapa parte de los montos | 40 de 40 |
+| Luz despareja | papel gris, orillas más oscuras, algo borrosa (como una foto real) | 51 de 51 |
+
+(La tabla corresponde a los 4 primeros documentos; con el quinto, una liquidación con cuadros dibujados
+como la de una empresa grande, el total es 251 de 255.)
 
 Lo que aprendí al probar:
 - «Mejorar» la foto antes de leerla (grises, quitar sombra, más contraste) **empeoró** el resultado
@@ -50,9 +58,24 @@ Lo que aprendí al probar:
 - El mismo archivo puede dar resultados levemente distintos en otro navegador (en una prueba se sumó
   la asignación familiar a «pagos fijos»). Por eso la revisión de la persona es indispensable.
 
+## Prueba con un iPhone real (18-10-2026)
+
+El dueño probó en un iPhone 17 Pro Max con su liquidación (la foto no se guardó en el proyecto).
+Faltó la gratificación, la suma no cuadró con el total y tardó más de un minuto con dos lecturas.
+Causas encontradas y corregidas:
+- El monto estaba pegado a la línea del cuadro; el lector lo leía bien («231.250») pero con confianza
+  casi cero y el filtro lo descartaba. Ahora se borran las líneas de las tablas antes de leer y no se
+  descartan montos ni palabras completas por baja confianza.
+- Con la luz despareja de una foto real, el método de blanco y negro que se usaba primero fallaba casi
+  entero (por eso siempre había segunda lectura). Ahora se usa primero Sauvola.
+- Se desactivó la relectura «en negativo» que Tesseract hace de cada línea dudosa.
+- Resultado con la misma foto en el Mac: los 6 conceptos correctos, la suma cuadra con el total y una
+  sola lectura de 2,4 s (antes 4,7 s con dos lecturas). Falta repetir la prueba en el iPhone: el
+  prototipo ahora muestra cuánto tarda cada etapa para medir dónde se va el tiempo en el teléfono.
+
 ## Tiempo y peso
 
-- **Tiempo:** 1,2 a 1,8 segundos por foto en un Mac M1 (hasta 3,2 s cuando hace la segunda lectura).
+- **Tiempo:** 1,2 a 2,4 segundos por foto en un Mac M1 (hasta 3,2 s cuando hace la segunda lectura).
   No tengo un teléfono para medir; según la diferencia de velocidad típica, un teléfono de gama media
   actual tardaría unos **3 a 7 segundos por foto** (el doble si repite la lectura).
 - **Descarga:** cada teléfono baja el lector **una sola vez y solo si usa la cámara**: entre 3,2 y
