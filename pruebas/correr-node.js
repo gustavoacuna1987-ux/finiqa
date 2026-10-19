@@ -10,6 +10,8 @@ var pdfjsLib = require('../web/vendor/pdfjs/pdf.min.js');
 
 globalThis.FiniqaMotor = require('../web/motor/calculo.js');
 globalThis.FiniqaLector = require('../web/motor/lector.js');
+globalThis.FiniqaCamara = require('../web/motor/camara.js');
+globalThis.FiniqaOcrGrabado = require('./fotos-sinteticas/ocr-grabado.js');
 globalThis.Pruebas = require('./marco.js');
 globalThis.FiniqaCasos = require('./casos.js');
 globalThis.FiniqaEsperados = require('./esperados.js');
@@ -24,6 +26,7 @@ require('./pruebas-motor.js');
 require('./pruebas-lector.js');
 require('./pruebas-app.js');
 require('./pruebas-indicadores.js');
+require('./pruebas-camara.js');
 
 var grupo = null;
 Pruebas.correr(function(r){

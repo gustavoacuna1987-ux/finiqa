@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fotos de prueba · Finiqa</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16202c;--muted:#5b6675;--line:#dfe3e8;--ok:#13795b;--bad:#b42318;--warn:#a15c07}
+@media (prefers-color-scheme: dark){:root{--bg:#11161d;--card:#18202a;--ink:#e8edf3;--muted:#9aa6b4;--line:#2a3542;--ok:#4cc79a;--bad:#ff8a80;--warn:#f0b35a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:24px;margin:0 0 4px}
+.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+small{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lectura de fotos de prueba</h1>
+  <p class="muted">Lee con el OCR del navegador las fotos sintéticas (datos inventados) de <code>pruebas/fotos-sinteticas/</code> y compara lo leído con lo que se obtiene del PDF original. Mide cuántos conceptos y montos se leen bien y cuánto demora. <code>?unavez=1</code> lee cada foto una sola vez (sin el segundo intento cuando no cuadra).</p>
+  <div class="acciones"><button type="button" id="btn">Leer las fotos</button></div>
+  <div id="res" class="card">Presiona «Leer las fotos».</div>
+  <pre id="ci" hidden></pre>
+</div>
+<script>window.FiniqaRaizWeb='../web/';</script>
+<script src="../web/motor/calculo.js"></script>
+<script src="../web/motor/lector.js"></script>
+<script src="../web/motor/camara.js"></script>
+<script src="../web/vendor/pdfjs/pdf.min.js"></script>
+<script src="../web/vendor/pdfjs/pdf.worker.min.js"></script>
+<script src="../web/foto.js"></script>
+<script>
+(function(){
+'use strict';
+var Lx=FiniqaLector, Cam=FiniqaCamara, Foto=FiniqaFoto, Mo=FiniqaMotor;
+pdfjsLib.GlobalWorkerOptions.workerSrc='../web/vendor/pdfjs/pdf.worker.min.js';
+var DOCS=['liquidacion-simple','liquidacion-dos-columnas','liquidacion-mes-parcial','liquidacion-tabla','finiquito-propuesta'];
+var VARIANTES=['buena','sombra','baja','dura','real'];
+var q=new URLSearchParams(location.search);
+
+// Para experimentar: ?unavez=1 (sin segundo intento), ?lineas=1 (sin borrar líneas), ?max=3000, ?agrandar=0, ?psm=6, ?umbral=2 (Sauvola), ?docs=...&variantes=...
+function opcionesUrl(doc){
+  var o={parametros:{}};
+  if(!q.get('unavez')) o.validar = /^finiquito/.test(doc) ? function(rows){ return Cam.leerFiniquito(rows).cuadra===true; } : Foto.liquidacionCuadra;
+  if(q.get('max')) o.maxLado=+q.get('max');
+  if(q.get('agrandar')==='0') o.agrandar=false;
+  if(q.get('lineas')==='1') o.conLineas=true;
+  if(q.get('psm')) o.parametros.tessedit_pageseg_mode=q.get('psm');
+  if(q.get('umbral')) o.parametros.thresholding_method=q.get('umbral');
+  return o;
+}
+if(q.get('docs')) DOCS=q.get('docs').split(',');
+if(q.get('variantes')) VARIANTES=q.get('variantes').split(',');
+function bajar(u){ return fetch(u).then(function(r){ if(!r.ok) throw new Error(u); return r; }); }
+function filasPdf(doc){
+  return bajar('pdfs-sinteticos/'+doc+'.pdf').then(function(r){ return r.arrayBuffer(); })
+    .then(function(b){ return Lx.abrirPdf(pdfjsLib, new Uint8Array(b)); }).then(Lx.pdfRows);
+}
+// Lo que se usaría en el formulario (campos del paso 2 o del paso 5) a partir de unas filas.
+function resultado(doc, rows){
+  if(/^finiquito/.test(doc)){ var R=Cam.leerFiniquito(rows); return {campos:R.campos, items:R.items.map(function(i){ return [i.label, i.amount, i.campo]; }), cuadra:R.cuadra}; }
+  var p=Lx.parseLiq(rows), f=Lx.nuevoArchivo(doc, p, 0);
+  var plan=Lx.planImportacion([f], {escala:true, fecha:true, afp:true, contrato:true, vac:true});
+  return {campos:plan.campos, items:p.items.map(function(i){ return [i.label, i.amount, i.dest]; }), cuadra:Lx.chequeo(f).estado, totalHab:p.totalHab};
+}
+function comparar(esp, obt){
+  var ks=Object.keys(esp.campos), bien=ks.filter(function(k){ return String(obt.campos[k]||'')===String(esp.campos[k]||''); });
+  var sobran=Object.keys(obt.campos).filter(function(k){ return !(k in esp.campos) && obt.campos[k]; });
+  // Conceptos: mismo monto y mismo destino que en el PDF
+  var usados={}, itemsBien=0;
+  esp.items.forEach(function(e){
+    for(var i=0;i<obt.items.length;i++){ var o=obt.items[i]; if(!usados[i] && o[1]===e[1] && o[2]===e[2]){ usados[i]=1; itemsBien++; return; } }
+  });
+  return {campos:ks.length, camposBien:bien.length, malos:ks.filter(function(k){ return bien.indexOf(k)<0; }).map(function(k){ return k+': '+(obt.campos[k]||'—')+' (PDF '+esp.campos[k]+')'; }).concat(sobran.map(function(k){ return k+' sobra: '+obt.campos[k]; })),
+    items:esp.items.length, itemsBien:itemsBien, itemsExtra:obt.items.length-itemsBien};
+}
+function correr(){
+  var out=[], box=document.getElementById('res');
+  box.innerHTML='Preparando…';
+  var cadena=Promise.resolve(), esperados={};
+  DOCS.forEach(function(doc){
+    cadena=cadena.then(function(){ return filasPdf(doc).then(function(rows){ esperados[doc]=resultado(doc, rows); }); });
+    VARIANTES.forEach(function(v){
+      cadena=cadena.then(function(){
+        box.innerHTML='Leyendo '+doc+'-'+v+'.jpg…';
+        return bajar('fotos-sinteticas/'+doc+'-'+v+'.jpg').then(function(r){ return r.blob(); })
+          .then(function(b){ return Foto.filas(b, function(t){ box.textContent=doc+'-'+v+': '+t; }, 0, opcionesUrl(doc)); })
+          .then(function(rows){
+            var obt=resultado(doc, rows), c=comparar(esperados[doc], obt);
+            out.push({doc:doc, v:v, ms:rows.ms, conf:rows.confianza, intentos:rows.intentos||1, c:c, obt:obt, tsv:rows.tsv, ancho:rows.ancho});
+          }, function(e){ out.push({doc:doc, v:v, error:String(e && e.message || e)}); });
+      });
+    });
+  });
+  return cadena.then(function(){ mostrar(out); return out; });
+}
+function mostrar(out){
+  var h='<table><thead><tr><th>Foto</th><th>Campos del formulario correctos</th><th>Conceptos con monto y destino correctos</th><th>Tiempo</th><th>Detalle</th></tr></thead><tbody>';
+  var tc=0, tcb=0, ti=0, tib=0, tms=0;
+  out.forEach(function(r){
+    if(r.error){ h+='<tr><td>'+r.doc+'-'+r.v+'</td><td colspan="4" class="bad">Error: '+r.error+'</td></tr>'; return; }
+    var c=r.c; tc+=c.campos; tcb+=c.camposBien; ti+=c.items; tib+=c.itemsBien; tms+=r.ms;
+    h+='<tr><td>'+r.doc+'-'+r.v+'<br><small>confianza OCR '+r.conf+(r.intentos>1?' · 2 lecturas':'')+'</small></td><td class="n '+(c.camposBien===c.campos&&!c.malos.length?'ok':'bad')+'">'+c.camposBien+' de '+c.campos+'</td><td class="n">'+c.itemsBien+' de '+c.items+(c.itemsExtra?' <small>(+'+c.itemsExtra+' de más)</small>':'')+'</td><td class="n">'+(r.ms/1000).toFixed(1)+' s</td><td><small>'+(c.malos.join('<br>')||'—')+'<br>cuadra: '+r.obt.cuadra+'</small></td></tr>';
+  });
+  h+='<tr><th>Total</th><th class="n">'+tcb+' de '+tc+' ('+Math.round(100*tcb/(tc||1))+'%)</th><th class="n">'+tib+' de '+ti+' ('+Math.round(100*tib/(ti||1))+'%)</th><th class="n">'+(tms/1000/(out.length||1)).toFixed(1)+' s por foto</th><th></th></tr></tbody></table>';
+  document.getElementById('res').innerHTML=h;
+  var ci=document.getElementById('ci'); ci.textContent='LISTO'+JSON.stringify(out);
+  window.resultadosFotos=out;
+}
+document.getElementById('btn').addEventListener('click', correr);
+if(q.get('auto')) correr();
+})();
+</script>
+</body>
+</html>

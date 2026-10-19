@@ -14,7 +14,7 @@ def esc(s):
 
 
 def pdf(nombre, paginas):
-    """paginas: lista de páginas; cada página es una lista de (x, y, texto, negrita) o ('rect', x, y, w, h)."""
+    """paginas: lista de páginas; cada página es una lista de (x, y, texto, negrita), ('rect', x, y, w, h) o ('caja', x, y, w, h) (solo borde)."""
     objs = []
 
     def add(contenido):
@@ -32,6 +32,9 @@ def pdf(nombre, paginas):
             if e[0] == 'rect':
                 _, x, y, w, h = e
                 ops.append('0.6 g %d %d %d %d re f 0 g' % (x, y, w, h))
+            elif e[0] == 'caja':
+                _, x, y, w, h = e
+                ops.append('0.8 w %s %s %s %s re S' % (x, y, w, h))
             else:
                 x, y, texto, negrita = e
                 ops.append('BT /%s 9 Tf %s %s Td (%s) Tj ET' % ('F2' if negrita else 'F1', x, y, esc(texto)))
@@ -165,9 +168,97 @@ def escaneo():
     pdf('escaneo-sin-texto.pdf', [[('rect', 40, 600, 500, 200), ('rect', 40, 400, 300, 100)]])
 
 
+# 5) Propuesta de finiquito del empleador (para probar la lectura de la oferta del paso 5).
+def finiquito():
+    e = [
+        (40, 800, 'FINIQUITO DE CONTRATO DE TRABAJO', True),
+        (40, 780, 'En Santiago, a 30 de septiembre de 2026, entre EMPRESA EJEMPLO SPA, RUT 76.000.000-0,', False),
+        (40, 767, 'y Persona Ficticia Uno, RUT 11.111.111-1, se acuerda el siguiente finiquito:', False),
+        (40, 747, 'PRIMERO: La persona trabajadora prestó servicios desde el 04/03/2019 hasta el 30/09/2026.', False),
+        (40, 734, 'Causal: artículo 161 inciso primero del Código del Trabajo, necesidades de la empresa.', False),
+        (40, 714, 'SEGUNDO: El empleador paga los siguientes montos:', False),
+        (40, 694, 'HABERES', True),
+    ]
+    f, y = filas(679, 15, [
+        ('Indemnización por años de servicio (7 años)', '', '$ 9.135.000'),
+        ('Indemnización sustitutiva del aviso previo', '', '$ 1.305.000'),
+        ('Feriado legal pendiente (12,5 días)', '', '$ 543.750'),
+        ('Feriado proporcional (3,2 días)', '', '$ 139.200'),
+        ('Remuneración 30 días septiembre 2026', '', '$ 1.305.000'),
+        ('Indemnización voluntaria', '', '$ 500.000'),
+        ('Total haberes', '', '$ 12.927.950'),
+    ], [40, 300, 460])
+    e += f
+    e.append((40, y - 10, 'DESCUENTOS', True))
+    f, y = filas(y - 25, 15, [
+        ('Aporte empleador seguro de cesantía (art. 13 Ley 19.728)', '', '$ 547.200'),
+        ('Préstamo empresa', '', '$ 200.000'),
+        ('Total descuentos', '', '$ 747.200'),
+        ('TOTAL A PAGAR', '', '$ 12.180.750'),
+    ], [40, 300, 460])
+    e += f
+    e.append((40, y - 20, 'TERCERO: Las partes declaran que no se adeudan otras sumas por ningún concepto.', False))
+    pdf('finiquito-propuesta.pdf', [e])
+
+
+# 6) Formato con tablas dibujadas (bordes de cuadros), cantidades con decimales y haberes no imponibles aparte.
+def tabla():
+    e = [
+        (60, 790, 'EMPRESA DE PRUEBA TECNOLOGIA S.A.', True),
+        (60, 772, 'Razon Social', False), (150, 772, 'EMPRESA DE PRUEBA TECNOLOGIA S.A.', False),
+        (60, 758, 'Rut', False), (150, 758, '76123456-0', False),
+        (330, 800, 'Periodo', False), (500, 800, '31.08.2026', False),
+        (330, 786, 'Días Trabajados', False), (510, 786, '30,00', False),
+        (330, 772, 'Cargas Legales', False), (515, 772, '0,00', False),
+        (220, 730, 'Liquidación de Remuneración', True),
+    ]
+    # Cuadro de datos personales (4 filas x 4 columnas)
+    filas_dp = [('Nombre', 'Persona Ficticia Cuatro', 'Rut', '44.444.444-4'),
+                ('Cargo', 'Analista de Pruebas', 'Fecha Ingreso', '01.03.2021'),
+                ('AFP', 'AFP: Provida', 'Salud', 'FONASA'),
+                ('Sueldo base', '1.850.000', 'Tope Imponible', '3.695.148')]
+    y = 700
+    for f in filas_dp:
+        e += [('caja', 50, y - 5, 70, 16), ('caja', 120, y - 5, 180, 16), ('caja', 300, y - 5, 110, 16), ('caja', 410, y - 5, 140, 16)]
+        e += [(53, y, f[0], False), (123, y, f[1], False), (303, y, f[2], False), (413, y, f[3], False)]
+        y -= 16
+    # Cuadros de haberes y descuentos
+    e += [('caja', 50, 380, 245, 245), ('caja', 305, 380, 245, 245)]
+    e += [(150, 612, 'Haberes', True), (395, 612, 'Descuentos', True),
+          (80, 598, 'Concepto', True), (240, 598, 'Monto', True), (335, 598, 'Concepto', True), (500, 598, 'Monto', True)]
+    f, _ = filas(584, 13, [
+        ('Sueldo Base', '30.00', '1.850.000'),
+        ('Gratificación legal', '4.75', '231.250'),
+        ('Gift Card Fiestas Patrias', '', '40.000'),
+        ('Aguinaldo Fiestas Patrias', '', '120.000'),
+    ], [55, 185, 253])
+    e += f
+    e += [(55, 532, 'Total Haberes Imponibles', True), (250, 532, '2.241.250', True)]
+    e += [(115, 505, 'Haberes No Imponibles', True), (80, 492, 'Concepto', True), (240, 492, 'Monto', True)]
+    f, _ = filas(478, 13, [('Movilizacion por Dia', '', '38.000'), ('Colación', '', '72.000')], [55, 185, 262])
+    e += f
+    e += [(55, 452, 'Total No Imponible', True), (257, 452, '110.000', True)]
+    f, _ = filas(584, 13, [
+        ('Fondo de pensiones', '10.00', '224.125'),
+        ('Comisión AFP', '1.45', '32.498'),
+        ('Contribución Salud Legal', '7.00', '156.888'),
+        ('Impuesto sobre la renta', '4.00', '41.212'),
+        ('Seg.desempleo indefinido', '0.60', '13.448'),
+    ], [310, 440, 500])
+    e += f
+    e += [(310, 519, 'Total descuentos legales', True), (498, 519, '468.171', True)]
+    # Totales en cuadros al pie
+    e += [('caja', 50, 350, 180, 18), ('caja', 230, 350, 65, 18), (55, 356, 'Total Haberes', True), (238, 356, '2.351.250', True),
+          ('caja', 305, 350, 175, 18), ('caja', 480, 350, 70, 18), (310, 356, 'Total Descuentos', True), (490, 356, '468.171', True),
+          ('caja', 305, 332, 175, 18), ('caja', 480, 332, 70, 18), (310, 338, 'Liquido a Pagar', True), (484, 338, '1.883.079', True)]
+    pdf('liquidacion-tabla.pdf', [e])
+
+
 if __name__ == '__main__':
     simple()
     dos_columnas()
     mes_parcial()
     escaneo()
+    finiquito()
+    tabla()
     print('PDFs generados en', AQUI)
