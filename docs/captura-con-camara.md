@@ -13,6 +13,9 @@ En 25 fotos de prueba (5 documentos inventados × 5 tipos de foto) se llenaron b
 En la primera prueba del dueño con un iPhone y una liquidación real faltó la gratificación y tardó más
 de un minuto; ver «Prueba con un iPhone real» más abajo.
 
+**Estado (18-10-2026): en el backlog.** Funciona en un iPhone real, pero tarda más de 30 segundos por
+foto; antes de publicarlo hay que hacerlo más rápido (ver `docs/backlog.md`).
+
 **Recomendación:** incluirlo como opción secundaria («Tomar una foto»), dejando el PDF como camino
 principal, y siempre con la pantalla de revisión que ya existe. Leer también la propuesta de finiquito
 (paso 5) vale la pena: es el mismo trabajo y es donde la persona más gana.
@@ -70,8 +73,10 @@ Causas encontradas y corregidas:
   entero (por eso siempre había segunda lectura). Ahora se usa primero Sauvola.
 - Se desactivó la relectura «en negativo» que Tesseract hace de cada línea dudosa.
 - Resultado con la misma foto en el Mac: los 6 conceptos correctos, la suma cuadra con el total y una
-  sola lectura de 2,4 s (antes 4,7 s con dos lecturas). Falta repetir la prueba en el iPhone: el
-  prototipo ahora muestra cuánto tarda cada etapa para medir dónde se va el tiempo en el teléfono.
+  sola lectura de 2,4 s (antes 4,7 s con dos lecturas).
+- Segunda prueba en el iPhone (misma noche): **leyó bien la liquidación con una sola lectura, pero tardó
+  más de 30 segundos**. El dueño lo considera demasiado lento para una buena experiencia, aunque aceptable
+  para un prototipo. Decisión: dejar la función en el backlog (ver `docs/backlog.md`).
 
 ## Tiempo y peso
 
