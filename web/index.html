@@ -51,10 +51,12 @@
         <p class="muted" style="margin-top:4px;font-size:14px">Sube el PDF de tu última liquidación y completamos los montos del paso 2. Si tienes comisiones, sube las de los últimos 3 meses. Revisarás todo antes de aplicarlo.</p>
       </div>
       <label class="drop" id="dropZone" for="pdfInput">
-        <input type="file" id="pdfInput" class="sr" accept="application/pdf,.pdf" multiple>
+        <input type="file" id="pdfInput" class="sr" accept="application/pdf,.pdf,image/*" multiple>
         <span class="drop-t">Arrastra aquí tus PDF o <u>elige archivos</u></span>
         <span class="hint">Hasta 3 liquidaciones en PDF. Se leen en este navegador: no se envían a ningún servidor ni se guardan.</span>
       </label>
+      <!-- Prototipo: foto de la liquidación (se lee en el teléfono con motor/camara.js y foto.js) -->
+      <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px"><label class="btn small" for="fotoInput"><input type="file" id="fotoInput" class="sr" accept="image/*" capture="environment">Tomar una foto de la liquidación</label><span class="hint">Prueba: hoja completa, derecha y con buena luz. La foto se lee en tu teléfono y no se envía.</span></p>
       <div id="pwdWrap" class="pwd" hidden>
         <label class="label" for="pdfPwd" id="pwdLbl">Este PDF tiene clave</label>
         <div class="pwd-row"><input type="password" id="pdfPwd" autocomplete="off"><button type="button" id="btnPwd" class="btn small primary">Abrir</button><button type="button" id="btnPwdSkip" class="btn small">Omitir</button></div>
@@ -322,6 +324,9 @@
     <section class="step" aria-labelledby="h5paso">
       <div class="step-head"><span class="step-n">5</span><div><h2 id="h5paso">Compara con lo que te ofrecen <span class="muted" style="font:400 14px var(--font-body)">(opcional)</span></h2><p>Si ya tienes una propuesta de finiquito, copia sus montos y verás las diferencias.</p></div></div>
       <label class="check"><input type="checkbox" id="comparar"><span>Tengo una propuesta de finiquito</span></label>
+      <!-- Prototipo: leer la propuesta desde una foto o un PDF (foto.js) -->
+      <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px"><label class="btn small" for="ofrFoto"><input type="file" id="ofrFoto" class="sr" accept="image/*,application/pdf,.pdf">Leer la propuesta desde una foto o PDF</label><span class="hint">Se lee en tu teléfono y no se envía. Revisa cada monto.</span></p>
+      <p id="ofrStatus" class="imp-status" role="status" aria-live="polite"></p>
       <div class="grid" id="cmpWrap" style="margin-top:16px">
         <div class="field"><label class="label" for="ofrIas">Indemnización por años de servicio</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrIas" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
         <div class="field"><label class="label" for="ofrAviso">Aviso previo (mes de aviso)</label><div class="affix has-pre"><span class="pre">$</span><input id="ofrAviso" type="text" inputmode="numeric" data-t="money" placeholder="0"></div></div>
@@ -438,7 +443,9 @@
 <!-- Motor de cálculo y lector de liquidaciones (sin interfaz) -->
 <script src="motor/calculo.js"></script>
 <script src="motor/lector.js"></script>
+<script src="motor/camara.js"></script>
 <!-- Interfaz -->
 <script src="interfaz.js"></script>
+<script src="foto.js"></script>
 </body>
 </html>

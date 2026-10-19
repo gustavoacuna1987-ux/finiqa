@@ -165,9 +165,43 @@ def escaneo():
     pdf('escaneo-sin-texto.pdf', [[('rect', 40, 600, 500, 200), ('rect', 40, 400, 300, 100)]])
 
 
+# 5) Propuesta de finiquito del empleador (para probar la lectura de la oferta del paso 5).
+def finiquito():
+    e = [
+        (40, 800, 'FINIQUITO DE CONTRATO DE TRABAJO', True),
+        (40, 780, 'En Santiago, a 30 de septiembre de 2026, entre EMPRESA EJEMPLO SPA, RUT 76.000.000-0,', False),
+        (40, 767, 'y Persona Ficticia Uno, RUT 11.111.111-1, se acuerda el siguiente finiquito:', False),
+        (40, 747, 'PRIMERO: La persona trabajadora prestó servicios desde el 04/03/2019 hasta el 30/09/2026.', False),
+        (40, 734, 'Causal: artículo 161 inciso primero del Código del Trabajo, necesidades de la empresa.', False),
+        (40, 714, 'SEGUNDO: El empleador paga los siguientes montos:', False),
+        (40, 694, 'HABERES', True),
+    ]
+    f, y = filas(679, 15, [
+        ('Indemnización por años de servicio (7 años)', '', '$ 9.135.000'),
+        ('Indemnización sustitutiva del aviso previo', '', '$ 1.305.000'),
+        ('Feriado legal pendiente (12,5 días)', '', '$ 543.750'),
+        ('Feriado proporcional (3,2 días)', '', '$ 139.200'),
+        ('Remuneración 30 días septiembre 2026', '', '$ 1.305.000'),
+        ('Indemnización voluntaria', '', '$ 500.000'),
+        ('Total haberes', '', '$ 12.927.950'),
+    ], [40, 300, 460])
+    e += f
+    e.append((40, y - 10, 'DESCUENTOS', True))
+    f, y = filas(y - 25, 15, [
+        ('Aporte empleador seguro de cesantía (art. 13 Ley 19.728)', '', '$ 547.200'),
+        ('Préstamo empresa', '', '$ 200.000'),
+        ('Total descuentos', '', '$ 747.200'),
+        ('TOTAL A PAGAR', '', '$ 12.180.750'),
+    ], [40, 300, 460])
+    e += f
+    e.append((40, y - 20, 'TERCERO: Las partes declaran que no se adeudan otras sumas por ningún concepto.', False))
+    pdf('finiquito-propuesta.pdf', [e])
+
+
 if __name__ == '__main__':
     simple()
     dos_columnas()
     mes_parcial()
     escaneo()
+    finiquito()
     print('PDFs generados en', AQUI)

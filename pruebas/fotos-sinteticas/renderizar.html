@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Renderizar PDFs sintéticos</title></head>
+<body>
+<!-- Lo usa generar.py: dibuja cada PDF sintético como imagen (200 ppp) con pdf.js y deja los resultados en #out. -->
+<pre id="out">PENDIENTE</pre>
+<script src="../../web/vendor/pdfjs/pdf.min.js"></script>
+<script src="../../web/vendor/pdfjs/pdf.worker.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='../../web/vendor/pdfjs/pdf.worker.min.js';
+var nombres=new URLSearchParams(location.search).get('pdfs').split(',');
+Promise.all(nombres.map(function(n){
+  return fetch('../pdfs-sinteticos/'+n).then(function(r){ return r.arrayBuffer(); })
+    .then(function(b){ return pdfjsLib.getDocument({data:new Uint8Array(b), isEvalSupported:false}).promise; })
+    .then(function(pdf){ return pdf.getPage(1); })
+    .then(function(pg){
+      var vp=pg.getViewport({scale:200/72}), c=document.createElement('canvas');
+      c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+      var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+      return pg.render({canvasContext:ctx, viewport:vp}).promise.then(function(){ return [n, c.toDataURL('image/png')]; });
+    });
+})).then(function(r){ document.getElementById('out').textContent='OK'+JSON.stringify(r); },
+         function(e){ document.getElementById('out').textContent='ERROR '+e; });
+</script>
+</body>
+</html>

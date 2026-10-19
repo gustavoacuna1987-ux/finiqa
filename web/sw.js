@@ -4,7 +4,7 @@
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-3';
+var VERSION = 'finiqa-4';
 var ARCHIVOS = [
   './',
   'index.html',
@@ -14,6 +14,8 @@ var ARCHIVOS = [
   'interfaz.js',
   'motor/calculo.js',
   'motor/lector.js',
+  'motor/camara.js',
+  'foto.js',
   'datos/indicadores.json',
   'vendor/pdfjs/pdf.min.js',
   'vendor/pdfjs/pdf.worker.min.js',
@@ -25,6 +27,8 @@ var ARCHIVOS = [
   'iconos/apple-touch-icon.png',
   'iconos/favicon-32.png'
 ];
+// El lector de fotos (vendor/tesseract/, ~3 MB) no está en la lista para no descargarlo a todos: se guarda
+// la primera vez que alguien usa una foto (redPrimero guarda todo archivo propio que pasa por aquí).
 var ESPERA_RED = 4000;
 
 self.addEventListener('install', function(e){

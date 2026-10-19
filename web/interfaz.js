@@ -291,21 +291,23 @@ function handleFiles(list){
 function processQueue(){
   if(!imp.queue.length){ finishImport(); return; }
   var q=imp.queue[0], name=q.file.name;
-  if(!/\.pdf$/i.test(name) && q.file.type!=='application/pdf'){
+  var foto=/^image\//.test(q.file.type) && window.FiniqaFoto; // prototipo: fotos con foto.js
+  if(!foto && !/\.pdf$/i.test(name) && q.file.type!=='application/pdf'){
     imp.errors.push('“'+esc(name)+'” no es un PDF.'); imp.queue.shift(); processQueue(); return;
   }
   setImpStatus('Leyendo “'+esc(name)+'”…','');
+  (foto ? FiniqaFoto.filas(q.file, function(t){ setImpStatus(esc(t),''); }, 0, {validar:FiniqaFoto.liquidacionCuadra}).catch(function(){ throw {code:'foto'}; }) :
   q.file.arrayBuffer()
     .then(function(buf){
       return getPdfJs().catch(function(){ throw {code:'lib'}; }).then(function(L){
         return Lx.abrirPdf(L, new Uint8Array(buf), q.pwd);
       });
     })
-    .then(Lx.pdfRows)
+    .then(Lx.pdfRows))
     .then(function(rows){
       imp.queue.shift();
       var p=Lx.parseLiq(rows);
-      if(!rows.length) imp.errors.push('“'+esc(name)+'” no tiene texto que se pueda leer: parece una foto o un escaneo. Descarga la liquidación en PDF desde el portal de tu empresa o ingresa los montos a mano.');
+      if(!rows.length) imp.errors.push(foto ? 'No encontramos texto en “'+esc(name)+'”. Toma la foto más cerca, derecha y con buena luz, o ingresa los montos a mano.' : '“'+esc(name)+'” no tiene texto que se pueda leer: parece una foto o un escaneo. Descarga la liquidación en PDF desde el portal de tu empresa o ingresa los montos a mano.');
       else if(!p.items.length && !p.totalHab) imp.errors.push('En “'+esc(name)+'” no encontramos conceptos de una liquidación (sueldo base, gratificación…).');
       else imp.files.push(Lx.nuevoArchivo(name, p, imp.seq++));
       processQueue();
@@ -314,6 +316,7 @@ function processQueue(){
       if(e && e.name==='PasswordException'){ askPwd(q, e.code===2); return; }
       imp.queue.shift();
       if(e && e.code==='lib'){ imp.queue=[]; setImpStatus('No se pudo cargar el lector de PDF. Recarga la página e inténtalo de nuevo.','bad'); return; }
+      if(e && e.code==='foto'){ imp.errors.push('No se pudo leer la foto “'+esc(name)+'”. La primera vez se necesita internet para descargar el lector de fotos.'); processQueue(); return; }
       imp.errors.push('No se pudo leer “'+esc(name)+'”. Puede estar dañado.');
       processQueue();
     });
@@ -392,6 +395,7 @@ function applyImport(){
   var h=$('h2paso'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'});
 }
 $('pdfInput').addEventListener('change', function(){ var fl=this.files; handleFiles(fl); this.value=''; });
+$('fotoInput').addEventListener('change', function(){ var fl=this.files; handleFiles(fl); this.value=''; });
 var dz=$('dropZone');
 ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('over'); }); });
 ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('over'); }); });
