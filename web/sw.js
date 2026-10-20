@@ -4,7 +4,7 @@
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-5';
+var VERSION = 'finiqa-6';
 var ARCHIVOS = [
   './',
   'calculadora/',
@@ -27,7 +27,9 @@ var ARCHIVOS = [
   'iconos/icono-maskable-512.png',
   'iconos/apple-touch-icon.png',
   'iconos/favicon-32.png',
-  'iconos/compartir.png'
+  'iconos/favicon.svg',
+  'iconos/favicon.ico',
+  'iconos/og-finiqa-1200x630.png'
 ];
 var ESPERA_RED = 4000;
 

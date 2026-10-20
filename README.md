@@ -19,9 +19,9 @@ compararlo con la propuesta del empleador antes de firmar.
 | `web/calculadora/index.html`, `web/calculadora/interfaz.js`, `web/estilos.css` | La calculadora: formulario y resultado. |
 | `web/vendor/pdfjs/` | pdf.js 3.11.174 (Mozilla, Apache 2.0), para leer PDFs en el navegador. Se carga solo al subir un PDF. |
 | `web/fuentes/` | Tipografía Geist (vercel/geist-font v1.7.2, licencia SIL OFL 1.1), incluida para no pedirla a otros sitios. |
-| `web/manifest.webmanifest`, `web/iconos/` | Nombre, colores e íconos para instalar Finiqa como app (`iconos/icono.svg` es el original). |
+| `web/manifest.webmanifest`, `web/iconos/` | Nombre, colores e íconos para instalar Finiqa como app (`iconos/icono.svg` es el original; `favicon.svg` cambia de color en modo oscuro). |
 | `web/terminos/`, `web/privacidad/` | Términos de uso y política de privacidad (Ley 19.628 y Ley 21.719). |
-| `web/sitemap.xml`, `web/robots.txt`, `web/iconos/compartir.png` | Mapa del sitio para Google e imagen que aparece al compartir el enlace. |
+| `web/sitemap.xml`, `web/robots.txt`, `web/iconos/og-finiqa-1200x630.png` | Mapa del sitio para Google e imagen que aparece al compartir el enlace. |
 | `sitio.json` | Dirección del sitio, responsable y correo de contacto. Para pasar a un dominio propio se cambia solo `urlBase`. |
 | `herramientas/preparar-sitio.py` | Antes de publicar, escribe los datos de `sitio.json` en las páginas. Si faltan el responsable o el correo, publica el resto del sitio sin términos ni privacidad y quita sus enlaces (lo marcado con `<!-- legal -->` o `// legal`). |
 | `web/datos/indicadores.json` | UF (último día de cada mes) y UTM, actualizadas a diario desde mindicador.cl. |
