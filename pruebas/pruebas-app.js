@@ -279,7 +279,11 @@ prueba('Sitio', 'Los fundamentos de la portada coinciden con el motor (fin de ob
     });
     var antes=Mo.estimar({tipo:'obra', causal:'159_5', fechaIngreso:'2018-06-01', fechaTermino:'2024-06-28', sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)});
     verdadero(!antes.L.some(function(x){ return x.label==='Indemnización por término de obra'; }) && /anteriores a 2019 no tienen/.test(obra), 'contratos por obra anteriores a 2019');
-    ['90 UF','11 años','14 de agosto de 1981','fracción superior a 6 meses'].forEach(function(f){ verdadero(ias.indexOf(f)>=0, 'años de servicio: falta «'+f+'»'); });
+    ['90 UF','11 años','14 de agosto de 1981','6 meses y un día o más','6 meses exactos no suman'].forEach(function(f){ verdadero(ias.indexOf(f)>=0, 'años de servicio: falta «'+f+'»'); });
+    // La fracción: 6 meses exactos no suman un año; 6 meses y 1 día, sí (igual que en el motor).
+    function anios(ft){ var L=Mo.estimar({fechaIngreso:'2020-01-01', fechaTermino:ft, sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)}).L; return L.filter(function(x){ return x.label==='Indemnización por años de servicio'; })[0].sub; }
+    verdadero(/^5 años/.test(anios('2025-06-30')), '6 meses exactos no deben sumar un año: '+anios('2025-06-30'));
+    verdadero(/^6 años/.test(anios('2025-07-01')), '6 meses y 1 día deben sumar un año: '+anios('2025-07-01'));
   });
 });
 })(typeof self!=='undefined' ? self : globalThis);
