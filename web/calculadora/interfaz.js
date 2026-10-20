@@ -251,7 +251,7 @@ if('IntersectionObserver' in window){
 
 /* ---------- Cargar liquidación de sueldo (PDF, se lee en el navegador) ---------- */
 // pdf.js (Mozilla, Apache 2.0) viene incluido en la app y se carga solo al subir el primer PDF.
-var PDFJS='vendor/pdfjs/';
+var PDFJS='../vendor/pdfjs/';
 function loadScript(src){
   return new Promise(function(res,rej){
     var s=document.createElement('script'); s.src=src;
@@ -422,15 +422,15 @@ $('impReview').addEventListener('click', function(e){
 });
 
 /* ---------- UF y UTM al día ---------- */
-// datos/indicadores.json se actualiza a diario desde mindicador.cl. Si no se puede leer, se usa la tabla incluida en el motor.
+// ../datos/indicadores.json se actualiza a diario desde mindicador.cl. Si no se puede leer, se usa la tabla incluida en el motor.
 if(typeof fetch==='function' && /^https?:$/.test(location.protocol)){
-  fetch('datos/indicadores.json').then(function(r){ return r.ok ? r.json() : null; })
+  fetch('../datos/indicadores.json').then(function(r){ return r.ok ? r.json() : null; })
     .then(function(j){ if(j && Mo.agregarIndicadores(j)) render(); }).catch(function(){});
 }
 
 /* ---------- App instalable y sin internet ---------- */
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
 }
 var instalarEv=null;
 var instalada=(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone===true;

@@ -119,7 +119,7 @@ window.Pruebas.correr(function(r){ hechas.push(r); $('resumen').textContent='Cor
     var malas=res.filter(function(r){ return !r.ok; }).length, lineas=['Pruebas automáticas: '+(res.length-malas)+'/'+res.length];
     return comparar('../referencia/calculadora_v8.html', 'la v8 original').then(function(v){
       malas+=v.filter(function(r){ return !r.ok; }).length; lineas.push('Comparación con la v8: '+v.filter(function(r){ return r.ok; }).length+'/'+v.length);
-      return comparar('../web/index.html', 'la nueva pantalla');
+      return comparar('../web/calculadora/index.html', 'la nueva pantalla');
     }).then(function(v){
       malas+=v.filter(function(r){ return !r.ok; }).length; lineas.push('Comparación con la nueva pantalla: '+v.filter(function(r){ return r.ok; }).length+'/'+v.length);
       var ci=document.createElement('pre'); ci.id='ci'; ci.textContent=(malas?'FALLA':'OK')+'\n'+lineas.join('\n');
@@ -176,7 +176,7 @@ function comparar(url, titulo){
   }).catch(function(e){ V.innerHTML='<p class="err">No se pudo comparar: '+esc(e.message)+'</p>'; return [{ok:false}]; }).then(function(res){ botones(true); return res; });
 }
 $('btnV8').addEventListener('click', function(){ comparar('../referencia/calculadora_v8.html', 'la v8 original'); });
-$('btnNueva').addEventListener('click', function(){ comparar('../web/index.html', 'la nueva pantalla'); });
+$('btnNueva').addEventListener('click', function(){ comparar('../web/calculadora/index.html', 'la nueva pantalla'); });
 $('btnGenerar').addEventListener('click', function(){
   botones(false);
   var V=$('vivo'); V.innerHTML='<p class="muted">Leyendo la v8…</p>';

@@ -1,20 +1,20 @@
-/* Finiqa · Service worker: guarda la calculadora en el dispositivo para usarla sin internet.
+/* Finiqa · Service worker: guarda el sitio (portada, calculadora y páginas legales) en el dispositivo para usarlo sin internet.
  * - Archivos propios: primero se piden a la red (así siempre llega la versión nueva) y, si no hay
  *   conexión o tarda más de 4 segundos, se usa la copia guardada.
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-4';
+var VERSION = 'finiqa-5';
 var ARCHIVOS = [
   './',
-  'index.html',
-  'terminos.html', // legal
-  'privacidad.html', // legal
+  'calculadora/',
+  'calculadora/interfaz.js',
+  'terminos/', // legal
+  'privacidad/', // legal
   'estilos.css',
   'paginas.css',
   'fuentes/Geist-Variable.woff2',
   'fuentes/GeistMono-Variable.woff2',
-  'interfaz.js',
   'motor/calculo.js',
   'motor/lector.js',
   'datos/indicadores.json',
@@ -48,10 +48,10 @@ self.addEventListener('fetch', function(e){
   if(url.origin===self.location.origin) e.respondWith(redPrimero(req, url));
 });
 
-// Copia guardada de un archivo propio (sin mirar "?..." de la dirección). Las páginas caen en index.html.
+// Copia guardada de un archivo propio (sin mirar "?..." de la dirección). Una página que no esté guardada cae en la calculadora.
 function copia(req){
   return caches.match(req, {ignoreSearch:true}).then(function(r){
-    return r || (req.mode==='navigate' ? caches.match('index.html') : undefined);
+    return r || (req.mode==='navigate' ? caches.match('calculadora/') : undefined);
   });
 }
 function redPrimero(req, url){

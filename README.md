@@ -13,14 +13,14 @@ compararlo con la propuesta del empleador antes de firmar.
 
 | Carpeta | Qué contiene |
 |---|---|
-| `web/` | La calculadora que se publica. |
+| `web/` | El sitio que se publica: portada (`index.html`), calculadora (`calculadora/`), términos (`terminos/`) y privacidad (`privacidad/`). |
 | `web/motor/calculo.js` | Motor de cálculo: todas las reglas del finiquito, sin pantalla. |
 | `web/motor/lector.js` | Lector de liquidaciones: reconoce los conceptos del texto de un PDF. |
-| `web/interfaz.js`, `web/index.html`, `web/estilos.css` | La pantalla: formulario y resultado. |
+| `web/calculadora/index.html`, `web/calculadora/interfaz.js`, `web/estilos.css` | La calculadora: formulario y resultado. |
 | `web/vendor/pdfjs/` | pdf.js 3.11.174 (Mozilla, Apache 2.0), para leer PDFs en el navegador. Se carga solo al subir un PDF. |
 | `web/fuentes/` | Tipografía Geist (vercel/geist-font v1.7.2, licencia SIL OFL 1.1), incluida para no pedirla a otros sitios. |
 | `web/manifest.webmanifest`, `web/iconos/` | Nombre, colores e íconos para instalar Finiqa como app (`iconos/icono.svg` es el original). |
-| `web/terminos.html`, `web/privacidad.html` | Términos de uso y política de privacidad (Ley 19.628 y Ley 21.719). |
+| `web/terminos/`, `web/privacidad/` | Términos de uso y política de privacidad (Ley 19.628 y Ley 21.719). |
 | `web/sitemap.xml`, `web/robots.txt`, `web/iconos/compartir.png` | Mapa del sitio para Google e imagen que aparece al compartir el enlace. |
 | `sitio.json` | Dirección del sitio, responsable y correo de contacto. Para pasar a un dominio propio se cambia solo `urlBase`. |
 | `herramientas/preparar-sitio.py` | Antes de publicar, escribe los datos de `sitio.json` en las páginas. Si faltan el responsable o el correo, publica el resto del sitio sin términos ni privacidad y quita sus enlaces (lo marcado con `<!-- legal -->` o `// legal`). |
@@ -49,6 +49,7 @@ de la app instalable (archivos para usar sin internet, rutas relativas, sin prog
 - Se instala desde el navegador (botón *Instalar app* en Android o Chrome; en iPhone, Compartir › Agregar a pantalla de inicio).
 - Después de la primera visita funciona sin conexión, incluida la lectura de PDFs.
 - Con conexión siempre se usa la versión más nueva; la copia guardada se usa si no hay red o si tarda más de 4 segundos.
+- Al instalarla se abre la calculadora (`calculadora/`); el service worker guarda también la portada y las páginas legales.
 - Todas las rutas son relativas: la misma carpeta `web/` sirve en `github.io/finiqa/` y en un dominio propio, sin cambiar nada.
 - Si se agrega un archivo a la app, hay que sumarlo a la lista `ARCHIVOS` de `web/sw.js` (una prueba avisa si falta).
 

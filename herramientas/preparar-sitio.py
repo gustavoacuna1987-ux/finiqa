@@ -19,7 +19,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.environ.get('FINIQA_SITIO', os.path.join(RAIZ, 'sitio.json'))
 TEXTO = ('.html', '.xml', '.txt', '.webmanifest', 'sw.js')
 # Páginas legales, relativas a web/ (se quitan si faltan responsable o contacto).
-LEGALES = ['terminos.html', 'privacidad.html']
+LEGALES = ['terminos/', 'privacidad/']
 BLOQUE_LEGAL = re.compile(r'[ \t]*<!-- legal -->.*?<!-- /legal -->[ \t]*\n?', re.S)
 LINEA_LEGAL = re.compile(r'^.*// legal[ \t]*\n', re.M)
 MARCAS_SITIO = re.compile(r'%(URL_BASE|RESPONSABLE|CONTACTO)%')
