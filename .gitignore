@@ -10,3 +10,4 @@ node_modules/
 
 # Documentos internos de negocio (no se publican)
 docs/privado/
+_sitio/

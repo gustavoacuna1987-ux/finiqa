@@ -1,0 +1,6 @@
+{
+  "_ayuda": "Datos del sitio que se escriben en las páginas al publicar (herramientas/preparar-sitio.py). Para pasar a un dominio propio, cambia solo urlBase (con / al final).",
+  "urlBase": "https://gustavoacuna1987-ux.github.io/finiqa/",
+  "responsable": "",
+  "contacto": ""
+}

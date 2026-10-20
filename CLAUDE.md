@@ -19,8 +19,14 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 3. Pruebas automáticas que reproducen los resultados de la v8 (hecho: `pruebas/`).
 4. Interfaz con el motor, PWA instalable sin internet, rutas relativas (sirven en github.io y en un dominio futuro) (hecho: `web/sw.js`, `web/manifest.webmanifest`).
 5. GitHub Actions: pruebas, publicación en GitHub Pages y actualización diaria de UF y UTM (mindicador.cl) con respaldo a la tabla incluida (hecho: `.github/workflows/publicar.yml`, https://gustavoacuna1987-ux.github.io/finiqa/).
-6. Términos, privacidad (Ley 21.719) y metadatos para Google.
+6. Términos, privacidad (Ley 21.719) y metadatos para Google (hecho: `web/terminos.html`, `web/privacidad.html`; dirección y contacto en `sitio.json`).
 7. Publicar y verificar.
+
+## Etapa 2 (marca, estructura y diseño)
+- Rutas: `/` portada, `/calculadora/` la app, `/pro/` Finiqa Pro, `/terminos/` y `/privacidad/`.
+- Términos y privacidad no se publican ni se enlazan mientras `sitio.json` no tenga responsable y correo: los enlaces van entre `<!-- legal -->` y `<!-- /legal -->` (en `sw.js`, con `// legal`).
+- El paso a paso es solo presentación: todos los campos y sus `id` siguen en la página (la comparación en vivo con la v8 los usa).
+- Los textos de "¿De dónde sale cada número?" en la portada salen del motor y esperan revisión legal; si cambia una regla, actualizarlos (hay una prueba que los compara).
 
 ## Entorno
 - Sin Node.js local: las pruebas corren en GitHub Actions (Node y Chrome) y en el navegador (`pruebas/index.html`).

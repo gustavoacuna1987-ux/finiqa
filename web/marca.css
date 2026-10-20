@@ -1,0 +1,117 @@
+/* Finiqa · Marca: tipografías, colores, encabezado, botones, tarjetas y pies que comparten todas las páginas.
+   Tipografías Geist y Geist Mono incluidas en el sitio (vercel/geist-font v1.7.2, licencia SIL OFL 1.1:
+   fuentes/LICENCIA-OFL.txt). Se sirven desde aquí mismo: no se piden a ningún otro sitio. */
+@font-face{font-family:"Geist";src:url("fuentes/Geist-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url("fuentes/GeistMono-Variable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+
+/* Colores (especificación 4.1). En modo oscuro la tarjeta Pro se invierte. */
+:root{
+  --bg:#EFF2F6; --surface:#FFFFFF; --line:#14202E; --soft:#D5DDE7; --line2:#C5D0DC;
+  --ink:#14202E; --muted:#4A5A6B;
+  --brand:#1D5BA6; --onBrand:#FFFFFF;
+  --chip:#E1ECF8; --chipText:#174E92;
+  --warn:#FCEBD2; --warnText:#8A4B00;
+  --proBg:#14202E; --proInk:#F3F6FA; --proMuted:#B4C2D3; --proChip:#24364A;
+  --proCheck:#86B5F2; --proEyebrow:#86B5F2; --proBtnBg:#FFFFFF; --proBtnInk:#14202E;
+  --shadow:rgba(20,32,46,.2);
+  --sans:"Geist", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono:"Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E141B; --surface:#16202B; --line:#6C7F94; --soft:#2A3948; --line2:#3A4A5C;
+    --ink:#E8EEF5; --muted:#A3B3C5;
+    --brand:#86B5F2; --onBrand:#0E141B;
+    --chip:#1B2C40; --chipText:#A9CBF7;
+    --warn:#3A2A12; --warnText:#F5C97A;
+    --proBg:#E8EEF5; --proInk:#14202E; --proMuted:#3E4E60; --proChip:#D3DDE9;
+    --proCheck:#1D5BA6; --proEyebrow:#1D5BA6; --proBtnBg:#1D5BA6; --proBtnInk:#FFFFFF;
+    --shadow:rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E141B; --surface:#16202B; --line:#6C7F94; --soft:#2A3948; --line2:#3A4A5C;
+  --ink:#E8EEF5; --muted:#A3B3C5;
+  --brand:#86B5F2; --onBrand:#0E141B;
+  --chip:#1B2C40; --chipText:#A9CBF7;
+  --warn:#3A2A12; --warnText:#F5C97A;
+  --proBg:#E8EEF5; --proInk:#14202E; --proMuted:#3E4E60; --proChip:#D3DDE9;
+  --proCheck:#1D5BA6; --proEyebrow:#1D5BA6; --proBtnBg:#1D5BA6; --proBtnInk:#FFFFFF;
+  --shadow:rgba(0,0,0,.5); color-scheme:dark;
+}
+
+/* Base */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+p{margin:0}
+:is(a,button,input,select,textarea,summary,label):focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.cifra{font-variant-numeric:tabular-nums}
+.contenedor{max-width:1160px;margin:0 auto;padding-left:max(24px, env(safe-area-inset-left, 0px));padding-right:max(24px, env(safe-area-inset-right, 0px))}
+
+/* Títulos */
+.antetitulo{font:500 13px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--brand)}
+.titulo{margin:0;font-weight:700;font-size:clamp(34px,4.6vw,52px);line-height:1.04;letter-spacing:-.04em;text-wrap:balance}
+.titulo-portada{font-size:clamp(40px,6.6vw,80px);line-height:.98;letter-spacing:-.045em}
+.azul{color:var(--brand)}
+.bajada{font-size:19px;color:var(--muted);max-width:620px}
+
+/* Encabezado: logo, navegación y distintivo */
+.cabecera{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:20px;padding-bottom:20px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.logo svg{width:44px;height:44px;flex:none}
+.logo span{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.cabecera-grande{padding-top:24px;padding-bottom:24px}
+.cabecera-grande .logo{gap:14px}
+.cabecera-grande .logo svg{width:52px;height:52px}
+.cabecera-grande .logo span{font-size:34px}
+.nav{display:flex;align-items:center;gap:8px 24px;flex-wrap:wrap}
+.nav-enlace{font-size:15px;font-weight:500;color:var(--muted);text-decoration:none}
+.nav-enlace:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.nav-enlace{display:none}}
+.marca-fondo{fill:var(--brand)}
+.marca-boleta{fill:var(--onBrand)}
+.marca-lineas{stroke:var(--brand)}
+
+/* Botones */
+.boton{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:12px;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font:600 15px/1.2 var(--sans);text-decoration:none;text-align:center;cursor:pointer}
+.boton:hover{border-color:var(--brand)}
+.boton.primario{background:var(--brand);border-color:var(--brand);color:var(--onBrand)}
+.boton.primario:hover{filter:brightness(1.07)}
+.boton.grande{min-height:52px;padding:0 24px;border-radius:14px;font-size:17px}
+.boton.mediano{min-height:48px;padding:0 22px;font-size:16px}
+.boton:disabled,.boton[aria-disabled="true"]{opacity:.55;cursor:not-allowed;filter:none}
+.enlace{font:inherit;background:none;border:0;padding:0;color:var(--brand);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+
+/* Chips y píldoras */
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:32px;padding:0 14px;border-radius:999px;background:var(--chip);color:var(--chipText);font-size:13px;font-weight:600;line-height:1.2}
+.chip svg{flex:none;stroke:currentColor}
+.chip-grande{min-height:36px;padding:0 16px;font-size:14px}
+
+/* Tarjetas */
+.tarjeta{background:var(--surface);border:1px solid var(--soft);border-radius:24px;padding:32px;min-width:0}
+.tarjeta-pro{background:var(--proBg);color:var(--proInk);border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.tarjeta-pro .chip{align-self:flex-start;background:var(--proChip);color:var(--proInk);font:600 12px/1.2 var(--mono);letter-spacing:.08em;min-height:26px;padding:0 12px}
+.tarjeta-pro h2{margin:0;font-size:22px;line-height:1.15;letter-spacing:-.025em}
+.tarjeta-pro .boton{background:var(--proBtnBg);border-color:var(--proBtnBg);color:var(--proBtnInk)}
+@media (max-width:640px){.tarjeta{padding:22px}.tarjeta-pro{padding:22px}}
+
+/* Listas con check */
+.checks{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.checks li{display:flex;gap:12px;align-items:flex-start}
+.checks svg{flex:none;width:20px;height:20px;margin-top:2px;fill:none;stroke:var(--brand);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.tarjeta-pro .checks{gap:10px;color:var(--proMuted)}
+.tarjeta-pro .checks svg{width:18px;height:18px;margin-top:3px;stroke:var(--proCheck)}
+
+/* Pie fino (calculadora, Pro y páginas legales) */
+.pie{border-top:1px solid var(--soft);margin-top:24px}
+.pie-interior{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 32px;padding-top:24px;padding-bottom:calc(32px + env(safe-area-inset-bottom, 0px));font-size:14px;color:var(--muted)}
+.pie-interior > div{max-width:680px;display:flex;flex-direction:column;gap:8px}
+.pie-enlaces{display:flex;flex-wrap:wrap;gap:8px 20px}
+.pie a{text-decoration:underline;text-underline-offset:2px}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}

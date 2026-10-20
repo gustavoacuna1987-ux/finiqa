@@ -1,0 +1,58 @@
+/* Finiqa · Portada: título, dos caminos con el número al centro, fundamentos y banda de marca.
+   Usa los colores y componentes de marca.css. */
+.portada{display:flex;flex-direction:column;align-items:center;gap:48px;padding-top:32px;padding-bottom:56px}
+.portada-intro{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+.portada-intro .titulo{max-width:900px}
+
+/* Dos caminos */
+.caminos{width:100%;display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:16px}
+.camino{flex:1 1 260px;min-width:0;border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:16px}
+.camino h2{margin:0;font-size:30px;line-height:1.1;letter-spacing:-.025em}
+.camino p:not(.antetitulo){flex:1;font-size:16px}
+.camino-trabajador{background:var(--surface);border:2px solid var(--brand)}
+.camino-trabajador p:not(.antetitulo){color:var(--muted)}
+.camino-pro{background:var(--proBg);color:var(--proInk);border:2px solid var(--proBg)}
+.camino-pro .antetitulo{color:var(--proEyebrow)}
+.camino-pro p:not(.antetitulo){color:var(--proMuted)}
+.camino-pro .boton{background:var(--proBtnBg);border-color:var(--proBtnBg);color:var(--proBtnInk)}
+.camino-numero{flex:0 1 320px;min-width:0;background:var(--surface);border-radius:24px;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;box-shadow:0 28px 48px -30px var(--shadow)}
+.numero-etiqueta{font:500 13px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.numero-monto{font:600 40px/1.1 var(--mono);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.numero-nota{font-size:13px;color:var(--muted)}
+.conector{flex:0 0 32px;align-self:center;height:2px;background:var(--brand)}
+.conector-oscuro{background:var(--ink)}
+@media (max-width:1000px){.conector{display:none}}
+@media (max-width:640px){.camino,.camino-numero{padding:24px}.camino h2{font-size:26px}.numero-monto{font-size:34px}}
+
+/* Fundamentos: chips que cambian el panel contiguo */
+.fundamentos{width:100%;padding:36px;display:flex;flex-wrap:wrap;gap:32px 56px;align-items:stretch}
+.fundamentos-intro{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:16px;justify-content:center}
+.fundamentos-intro h2{margin:0;font-size:clamp(26px,3vw,36px);line-height:1.1;letter-spacing:-.03em}
+.fundamentos-intro > p{color:var(--muted)}
+.fundamentos-chips{display:flex;flex-wrap:wrap;gap:8px}
+.fundamentos-chips[hidden]{display:none}
+.fundamentos-chips button{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;border:1.5px solid var(--line2);background:var(--surface);color:var(--ink);font:600 15px/1.2 var(--sans);cursor:pointer}
+.fundamentos-chips button:hover{border-color:var(--brand)}
+.fundamentos-chips button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--onBrand)}
+.fundamentos .fundamentos-fuente{font:400 12px/1.5 var(--mono);letter-spacing:.04em;color:var(--muted)}
+.fundamentos-paneles{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.fundamento{min-height:220px;background:var(--bg);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+.fundamento-ref{font:600 13px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.fundamento h3{margin:0;font-size:22px;line-height:1.2;letter-spacing:-.02em}
+.fundamento p:not(.fundamento-ref){color:var(--muted)}
+@media (max-width:640px){.fundamentos{padding:22px}.fundamento{padding:22px;min-height:0}}
+
+/* Banda de marca: siempre sobre fondo claro para que el logo conserve el azul de marca */
+.pie-marca{--surface:#FFFFFF;--ink:#14202E;--muted:#4A5A6B;--brand:#1D5BA6;--onBrand:#FFFFFF;
+  background:var(--surface);color:var(--ink);border-top:2px solid var(--line)}
+.pie-marca-interior{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:32px;padding-top:48px;padding-bottom:calc(48px + env(safe-area-inset-bottom, 0px))}
+.pie-marca-logo{display:flex;align-items:center;gap:20px}
+.pie-marca-logo svg{width:72px;height:72px;flex:none}
+.pie-marca-logo > div{display:flex;flex-direction:column;gap:6px}
+.pie-marca-nombre{font-size:48px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.pie-marca-lema{font-size:24px;font-weight:600;letter-spacing:-.025em;line-height:1.15}
+.pie-marca-texto{flex:1 1 360px;max-width:520px;display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--muted)}
+.pie-marca-texto .pie-enlaces{gap:8px 24px}
+.pie-marca a{text-decoration:underline;text-underline-offset:2px}
+.pie-marca :focus-visible{outline-color:#1D5BA6}
+@media (max-width:640px){.pie-marca-nombre{font-size:40px}.pie-marca-lema{font-size:20px}.pie-marca-logo svg{width:60px;height:60px}}

@@ -1,0 +1,4 @@
+# Solo tiene efecto en la raíz de un dominio propio (por ejemplo, finiqa.cl).
+User-agent: *
+Allow: /
+Sitemap: %URL_BASE%sitemap.xml

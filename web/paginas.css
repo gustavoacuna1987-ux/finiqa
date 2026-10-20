@@ -1,0 +1,15 @@
+/* Páginas de texto (términos y privacidad). Usa los colores y tipografías de marca.css. */
+.doc{max-width:808px;padding-top:12px;padding-bottom:48px}
+.doc .volver{display:inline-block;margin-bottom:28px;font-size:15px;font-weight:500;color:var(--brand)}
+.doc .antetitulo{margin-bottom:12px}
+.doc h2{margin:40px 0 10px;font-size:22px;line-height:1.2;letter-spacing:-.02em}
+.doc p,.doc li{margin:10px 0;line-height:1.65}
+.doc ul{padding-left:22px;margin:10px 0}
+.doc a{color:var(--brand)}
+.doc .meta{color:var(--muted);font-size:14px;margin-top:14px}
+.doc .resumen{background:var(--chip);border-radius:18px;padding:8px 22px;margin:28px 0}
+.doc .resumen ul{padding-left:18px}
+.doc table{border-collapse:collapse;width:100%;font-size:15px;margin:12px 0}
+.doc th,.doc td{border-top:1px solid var(--soft);padding:10px 8px;text-align:left;vertical-align:top}
+.doc th{font-weight:600}
+.doc .tabla{overflow-x:auto}

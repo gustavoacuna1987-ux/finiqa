@@ -122,7 +122,7 @@ function render(){
     var st=items.reduce(function(a,b){return a+b.amount;},0), neg=g[0]==='desc';
     html+='<div class="grp"><div class="grp-h"><span>'+g[1]+(g[2]?' · '+g[2]:'')+'</span><span class="num'+(neg?' neg':'')+'">'+(neg?'−':'')+money(st)+'</span></div>';
     items.forEach(function(it){
-      html+='<details class="line"><summary><span class="tw" aria-hidden="true"></span><span class="l-label">'+it.label+(it.tag?'<span class="tag">'+it.tag+'</span>':'')+(it.sub?'<small>'+it.sub+'</small>':'')+'</span><span class="leader"></span><span class="amount'+(neg?' neg':'')+'">'+(neg?'−':'')+money(it.amount)+'</span></summary><div class="how">'+it.how+'</div></details>';
+      html+='<details class="line"><summary><span class="l-texto"><span class="l-label">'+it.label+(it.tag?'<span class="tag">'+it.tag+'</span>':'')+(it.sub?'<small>'+it.sub+'</small>':'')+'</span><span class="ver" aria-hidden="true"></span></span><span class="leader"></span><span class="amount'+(neg?' neg':'')+'">'+(neg?'−':'')+money(it.amount)+'</span></summary><div class="how">'+it.how+'</div></details>';
     });
     html+='</div>';
   });
@@ -132,7 +132,7 @@ function render(){
   $('resGroups').innerHTML=html;
   document.querySelectorAll('#resGroups details').forEach(function(d){ if(open[d.querySelector('.l-label').firstChild.textContent]) d.open=true; });
   $('resTotal').textContent=money(R.total);
-  $('mbTotal').textContent=money(R.total);
+  renderBoleta(R);
 
   // comparación
   renderCmp(R);
@@ -140,7 +140,7 @@ function render(){
   // juicio
   if(R.juicio){
     $('resJuicio').hidden=false;
-    $('resJuicio').innerHTML='<h3>Si reclamas y el tribunal te da la razón</h3><p class="big">+'+money(R.juicio.extra)+'</p><p>'+R.juicio.txt+'</p><p class="hint">Plazo para demandar: 60 días hábiles desde el término (se extiende hasta 90 si primero reclamas en la Inspección del Trabajo). La Corporación de Asistencia Judicial y las Oficinas de Defensa Laboral te asesoran gratis.</p>';
+    $('resJuicio').innerHTML='<h2>Si reclamas y el tribunal te da la razón</h2><p class="big">+'+money(R.juicio.extra)+'</p><p>'+R.juicio.txt+'</p><p class="hint">Plazo para demandar: 60 días hábiles desde el término (se extiende hasta 90 si primero reclamas en la Inspección del Trabajo). La Corporación de Asistencia Judicial y las Oficinas de Defensa Laboral te asesoran gratis.</p>';
   } else $('resJuicio').hidden=true;
 
   // avisos
@@ -150,17 +150,80 @@ function render(){
 
   lastR=R;
 }
+var ICONO_AVISO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18.2v.1"/></svg>';
+var ICONO_OK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function renderCmp(R){
   var P=$('resCmp'), C=Mo.comparar(R);
-  if(!C){ P.hidden=true; return; }
-  if(C.estado==='vacia'){ P.hidden=false; P.innerHTML='<h3>Comparación</h3><p class="hint">Ingresa los montos de la propuesta en el paso 5 para compararla.</p>'; return; }
+  if(!C){ P.hidden=true; $('cmpVacio').hidden=false; return; }
+  $('cmpVacio').hidden=true;
+  if(C.estado==='vacia'){ P.hidden=false; P.innerHTML='<p class="hint">Ingresa los montos de la propuesta en el paso 5 para compararla.</p><button type="button" class="boton" data-ir="5">Ir al paso 5</button>'; return; }
   var body=C.filas.map(function(r){
-    return '<tr><td>'+r.concepto+'</td><td>'+money(r.estimado)+'</td><td>'+money(r.ofrecido)+'</td><td class="'+r.cls+'">'+(r.igual?'≈ igual':(r.impacto>0?'+':'')+money(r.impacto))+'</td></tr>';
+    return '<tr'+(r.cls==='d-bad'?' class="fila-dif"':'')+'><td>'+r.concepto+'</td><td>'+money(r.estimado)+'</td><td>'+money(r.ofrecido)+'</td><td class="'+r.cls+'">'+(r.igual?'≈ igual':(r.impacto>0?'+':'')+money(r.impacto))+'</td></tr>';
   }).join('');
   P.hidden=false;
-  P.innerHTML='<h3>Comparación con la propuesta</h3><p>'+C.msg+'</p><div class="cmp-wrap"><table class="cmp"><thead><tr><th>Concepto</th><th>Estimado</th><th>Ofrecido</th><th>Diferencia</th></tr></thead><tbody>'+body+
-    '</tbody><tfoot><tr><td>Total a recibir</td><td>'+money(R.total)+'</td><td>'+money(C.ofrTotal)+'</td><td class="'+C.clsTotal+'">'+(C.igualTotal?'≈ igual':(C.dT>0?'+':'')+money(C.dT))+'</td></tr></tfoot></table></div><p class="hint">En descuentos, una diferencia en rojo significa que te descuentan más de lo estimado.</p>';
+  P.innerHTML='<div class="cmp-aviso cmp-'+C.estado+'">'+(C.estado==='menor'?ICONO_AVISO:ICONO_OK)+'<p>'+C.msg+'</p></div><div class="cmp-wrap"><table class="cmp"><thead><tr><th scope="col">Concepto</th><th scope="col">Referencia</th><th scope="col">Propuesta</th><th scope="col">Diferencia</th></tr></thead><tbody>'+body+
+    '</tbody><tfoot><tr><td>Total a recibir</td><td>'+money(R.total)+'</td><td>'+money(C.ofrTotal)+'</td><td class="'+C.clsTotal+'">'+(C.igualTotal?'≈ igual':(C.dT>0?'+':'')+money(C.dT))+'</td></tr></tfoot></table></div><p class="hint">Referencia es lo que estima Finiqa; propuesta, lo que te ofrecen. En descuentos, una diferencia en rojo significa que te descuentan más de lo estimado.</p>';
 }
+
+/* ---------- Boleta en vivo ---------- */
+// Montos del motor agrupados como en la boleta. Mientras no llegas al paso donde se ingresa un dato, se muestra "paso N".
+var BOLETA=[['ias','Años de servicio',2],['aviso','Aviso previo',2],['vac','Vacaciones',3],['rem','Último sueldo',4],['vol','Indemnización voluntaria',4,true],['desc','Descuentos',4]];
+function renderBoleta(R){
+  var h='';
+  BOLETA.forEach(function(b){
+    var m=R.sumK(b[0]), neg=b[0]==='desc';
+    if(b[3] && !m) return;
+    var valor = m ? (neg?'−':'')+money(m) : (pasoMax<b[2] ? 'paso '+b[2] : money(0));
+    h+='<li class="'+(m?'':'pendiente')+'"><span>'+b[1]+'</span><span class="puntos" aria-hidden="true"></span><span class="cifra">'+valor+'</span></li>';
+  });
+  $('bvLineas').innerHTML=h;
+  var completa=pasoMax>=5;
+  $('bvEstado').textContent=completa?'Completa':'Parcial';
+  $('bvTotalLbl').textContent=completa?'Total':'Subtotal';
+  $('bvTotal').textContent=money(R.total);
+  $('mbLbl').textContent=completa?'Total estimado':'Subtotal';
+  $('mbTotal').textContent=money(R.total);
+}
+
+/* ---------- Paso a paso (solo presentación: todos los campos siguen en la página) ---------- */
+var PASOS=['Contrato','Sueldo','Vacaciones','Último mes','Compara'];
+var paso=1, pasoMax=1;
+function mostrarVista(resultado){
+  $('vistaPasos').hidden=resultado; $('vistaResultado').hidden=!resultado;
+  $('antetitulo').textContent = resultado ? 'Resultado · Estimación referencial' : 'Calculadora de finiquito · Chile';
+  $('tituloTexto').textContent = resultado ? 'Tu finiquito, con cada cifra a la vista' : 'Calcula tu finiquito paso a paso';
+  document.body.classList.toggle('en-resultado', resultado);
+}
+function irPaso(n, enfocar){
+  paso=Math.max(1, Math.min(5, n)); pasoMax=Math.max(pasoMax, paso);
+  mostrarVista(false);
+  document.querySelectorAll('#form .paso').forEach(function(s){ s.hidden = +s.dataset.paso!==paso; });
+  document.querySelectorAll('#pasosLista .paso-btn').forEach(function(b){
+    var i=+b.dataset.ir;
+    b.parentNode.className = i<paso ? 'hecho' : (i===paso ? 'actual' : 'pendiente');
+    if(i===paso) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current');
+    b.querySelector('.paso-circulo').innerHTML = i<paso ? ICONO_OK : String(i);
+    b.setAttribute('aria-label', 'Paso '+i+' de 5: '+PASOS[i-1]+(i<paso?' (listo)':''));
+  });
+  $('pasoMovil').textContent='Paso '+paso+' de 5 · '+PASOS[paso-1];
+  $('btnVolver').hidden = paso===1;
+  $('btnSeguir').textContent = paso===5 ? 'Ver mi resultado' : 'Continuar';
+  if(lastR) renderBoleta(lastR);
+  if(enfocar){ var h=$('h'+paso+'paso'); h.focus({preventScroll:true}); $('pasosLista').scrollIntoView({block:'start'}); }
+}
+function verResultado(){
+  pasoMax=5; if(lastR) renderBoleta(lastR);
+  mostrarVista(true);
+  $('titulo').focus({preventScroll:true}); window.scrollTo(0, 0);
+}
+$('btnSeguir').addEventListener('click', function(){ if(paso<5) irPaso(paso+1, true); else verResultado(); });
+$('btnVolver').addEventListener('click', function(){ irPaso(paso-1, true); });
+$('btnEditar').addEventListener('click', function(){ irPaso(1, true); });
+$('btnIrComparar').addEventListener('click', function(){ irPaso(5, true); });
+document.addEventListener('click', function(e){
+  var b=e.target.closest && e.target.closest('[data-ir]');
+  if(b) irPaso(+b.dataset.ir, b.closest('#resCmp')!=null);
+});
 var lastR=null;
 
 /* ---------- Eventos ---------- */
@@ -208,13 +271,13 @@ function showToastNear(msg){ var t=$('toast'); t.textContent=msg; clearTimeout(t
 
 function applyExample(){
   isExample=true; editedExample=false; manual={uf:false,utm:false,imm:false};
-  setState(EJEMPLO); $('diasTrabajados').dataset.auto='0';
+  setState(EJEMPLO); $('diasTrabajados').dataset.auto='0'; pasoMax=5;
   $('bannerTxt').innerHTML='Estás viendo un <strong>ejemplo con datos ficticios</strong>. Cámbialos por los tuyos.';
   $('banner').hidden=false; render(); save();
 }
 function clearAll(){
   isExample=false; editedExample=false; manual={uf:false,utm:false,imm:false};
-  setState(DEFAULTS); $('banner').hidden=true; render(); save();
+  setState(DEFAULTS); $('banner').hidden=true; pasoMax=1; irPaso(1); render(); save();
   var f=$('fechaIngreso'); if(f) f.focus();
 }
 $('btnEjemplo').addEventListener('click', applyExample);
@@ -244,14 +307,14 @@ if(topLevel){
   window.addEventListener('beforeprint', function(){ document.querySelectorAll('#resGroups details').forEach(function(d){ d.open=true; }); });
 }
 
-// Barra móvil: se oculta cuando el resultado está a la vista
+// Barra móvil: se oculta cuando la boleta en vivo está a la vista
 if('IntersectionObserver' in window){
-  new IntersectionObserver(function(en){ $('mobilebar').classList.toggle('away', en[0].isIntersecting); }, {threshold:0}).observe(document.querySelector('.boleta'));
+  new IntersectionObserver(function(en){ $('mobilebar').classList.toggle('away', en[0].isIntersecting); }, {threshold:0}).observe($('boletaVivo'));
 }
 
 /* ---------- Cargar liquidación de sueldo (PDF, se lee en el navegador) ---------- */
 // pdf.js (Mozilla, Apache 2.0) viene incluido en la app y se carga solo al subir el primer PDF.
-var PDFJS='vendor/pdfjs/';
+var PDFJS='../vendor/pdfjs/';
 function loadScript(src){
   return new Promise(function(res,rej){
     var s=document.createElement('script'); s.src=src;
@@ -328,7 +391,7 @@ function finishImport(){
   var errs=imp.errors.length ? '<br>'+imp.errors.join('<br>') : '';
   if(imp.files.length){
     renderReview();
-    setImpStatus('Revisa lo que encontramos y presiona <strong>Usar estos datos</strong>.'+errs, imp.errors.length?'warn':'');
+    setImpStatus('Revisa antes de aplicar: corrige lo que haga falta y presiona <strong>Aplicar montos</strong>.'+errs, imp.errors.length?'warn':'');
   } else {
     setImpStatus((errs?errs.slice(4):'No se pudo leer ningún archivo.'), 'bad');
   }
@@ -342,7 +405,7 @@ function renderReview(){
   if(files.length>1) h+='<p class="hint" style="margin-top:12px">Los montos fijos se toman de la liquidación más reciente'+(latest.p.periodo?' ('+Lx.periodoTxt(latest.p.periodo)+')':'')+'. Las comisiones se toman de cada una para calcular el promedio.</p>';
   files.forEach(function(f){
     var fi=imp.files.indexOf(f);
-    h+='<div class="imp-file"><h3>'+esc(f.name)+(f.p.periodo?' <small>· '+Lx.periodoTxt(f.p.periodo)+'</small>':'')+(f===latest&&files.length>1?' <span class="tag">Más reciente</span>':'')+'</h3>';
+    h+='<div class="imp-file"><h3>'+esc(f.name)+(f.p.periodo?' <small>· '+Lx.periodoTxt(f.p.periodo)+'</small>':'')+' <span class="leida">· leída en tu navegador</span>'+(f===latest&&files.length>1?' <span class="tag">Más reciente</span>':'')+'</h3>';
     if(f.p.items.length){
       h+='<div class="cmp-wrap"><table class="imp"><thead><tr><th>Concepto en tu liquidación</th><th style="text-align:right">Monto</th><th>Usar como</th></tr></thead><tbody>';
       f.p.items.forEach(function(it,i){
@@ -362,7 +425,7 @@ function renderReview(){
   if(X.diasParciales) ex.push('<label class="check"><input type="checkbox" id="impEscala" checked><span>Tu liquidación más reciente muestra <strong>'+num(X.diasParciales)+' días trabajados</strong>, así que los montos fijos son proporcionales. Llevarlos a un mes completo (30 días).</span></label>');
   if(ex.length) h+='<div class="imp-file"><h3>Otros datos encontrados</h3><div class="imp-extras">'+ex.join('')+'</div></div>';
   h+='<div class="imp-file"><h3>Así quedará tu sueldo</h3><div id="impPreview"></div></div>';
-  h+='<div class="imp-actions"><button type="button" id="btnImpUsar" class="btn primary">Usar estos datos</button><button type="button" id="btnImpDesc" class="btn">Descartar</button></div><p class="err" id="impBlock" hidden>Corrige lo marcado en rojo para continuar.</p>';
+  h+='<div class="imp-actions"><button type="button" id="btnImpUsar" class="boton primario">Aplicar montos</button><button type="button" id="btnImpDesc" class="boton">Ignorar</button></div><p class="err" id="impBlock" hidden>Corrige lo marcado en rojo para continuar.</p>';
   box.innerHTML=h; box.hidden=false;
   updatePreview();
 }
@@ -422,15 +485,15 @@ $('impReview').addEventListener('click', function(e){
 });
 
 /* ---------- UF y UTM al día ---------- */
-// datos/indicadores.json se actualiza a diario desde mindicador.cl. Si no se puede leer, se usa la tabla incluida en el motor.
+// ../datos/indicadores.json se actualiza a diario desde mindicador.cl. Si no se puede leer, se usa la tabla incluida en el motor.
 if(typeof fetch==='function' && /^https?:$/.test(location.protocol)){
-  fetch('datos/indicadores.json').then(function(r){ return r.ok ? r.json() : null; })
+  fetch('../datos/indicadores.json').then(function(r){ return r.ok ? r.json() : null; })
     .then(function(j){ if(j && Mo.agregarIndicadores(j)) render(); }).catch(function(){});
 }
 
 /* ---------- App instalable y sin internet ---------- */
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
 }
 var instalarEv=null;
 var instalada=(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone===true;
@@ -451,6 +514,9 @@ if(saved && saved.v){
   setState(saved.v); isExample=!!saved.example; editedExample=!!saved.edited;
   manual=Object.assign({uf:false,utm:false,imm:false}, saved.manual||{});
   if(isExample){ $('banner').hidden=false; if(editedExample) $('bannerTxt').innerHTML='Partiste desde el <strong>ejemplo</strong>. Revisa que todos los datos sean los tuyos.'; }
+  // Si ya hay datos guardados, la boleta muestra todos los montos desde el comienzo.
+  if(saved.v.sueldoBase || saved.v.fechaIngreso) pasoMax=5;
   render();
 } else applyExample();
+irPaso(1);
 })();

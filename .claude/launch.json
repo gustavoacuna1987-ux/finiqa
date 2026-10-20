@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-I", "pruebas/servidor-local.py"],
       "port": 8642
+    },
+    {
+      "name": "finiqa-celular",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "python3 -I herramientas/preparar-sitio.py _sitio && python3 -I -m http.server 8643 --bind 0.0.0.0 --directory _sitio"],
+      "port": 8643
     }
   ]
 }
