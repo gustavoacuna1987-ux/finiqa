@@ -291,8 +291,10 @@ $('btnEjemplo').addEventListener('click', applyExample);
 $('btnLimpiar').addEventListener('click', clearAll);
 $('btnBannerLimpiar').addEventListener('click', clearAll);
 
+// Texto del resumen (copiar y compartir), con una línea final que dice de dónde salió.
+function textoResumen(){ return Mo.resumenTexto(lastR)+'\nCalculado con Finiqa: '+location.href.split('#')[0].split('?')[0]; }
 $('btnCopiar').addEventListener('click', function(){
-  var txt=Mo.resumenTexto(lastR);
+  var txt=textoResumen();
   function fallback(){
     var ta=document.createElement('textarea'); ta.value=txt; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
     document.body.appendChild(ta); ta.select();
@@ -316,7 +318,7 @@ if(topLevel && appIphone){
     $('btnImprimir').textContent='Compartir resumen';
     $('btnImprimir').hidden=false;
     $('btnImprimir').addEventListener('click', function(){
-      navigator.share({title:'Estimación de finiquito', text:Mo.resumenTexto(lastR)}).catch(function(e){
+      navigator.share({title:'Estimación de finiquito', text:textoResumen()}).catch(function(e){
         if(!e || e.name!=='AbortError') showToastNear('No se pudo compartir. Usa «Copiar resumen».');
       });
     });
