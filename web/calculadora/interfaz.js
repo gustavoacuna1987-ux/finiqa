@@ -167,7 +167,7 @@ function renderCmp(R){
 
 /* ---------- Boleta en vivo ---------- */
 // Montos del motor agrupados como en la boleta. Mientras no llegas al paso donde se ingresa un dato, se muestra "paso N".
-var BOLETA=[['ias','Años de servicio',1],['aviso','Aviso previo',1],['vac','Vacaciones',3],['rem','Último sueldo',4],['vol','Indemnización voluntaria',4,true],['desc','Descuentos',4]];
+var BOLETA=[['ias','Años de servicio',2],['aviso','Aviso previo',2],['vac','Vacaciones',3],['rem','Último sueldo',4],['vol','Indemnización voluntaria',4,true],['desc','Descuentos',4]];
 function renderBoleta(R){
   var h='';
   BOLETA.forEach(function(b){
@@ -191,7 +191,7 @@ var paso=1, pasoMax=1;
 function mostrarVista(resultado){
   $('vistaPasos').hidden=resultado; $('vistaResultado').hidden=!resultado;
   $('antetitulo').textContent = resultado ? 'Resultado · Estimación referencial' : 'Calculadora de finiquito · Chile';
-  $('titulo').textContent = resultado ? 'Tu finiquito, con cada cifra a la vista' : 'Calcula tu finiquito paso a paso';
+  $('tituloTexto').textContent = resultado ? 'Tu finiquito, con cada cifra a la vista' : 'Calcula tu finiquito paso a paso';
   document.body.classList.toggle('en-resultado', resultado);
 }
 function irPaso(n, enfocar){

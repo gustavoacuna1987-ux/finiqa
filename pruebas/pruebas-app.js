@@ -165,4 +165,121 @@ prueba('Términos y privacidad', 'Sin responsable y correo no se publican: todo 
     });
   });
 });
+
+/* ---------- Sitio: portada, calculadora y Pro (especificación de la etapa 2) ---------- */
+function texto(html){ return html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '); }
+function meta(h, atr, nombre){ var m=h.match(new RegExp('<meta '+atr+'="'+nombre.replace(/:/g,'\\:')+'" content="([^"]*)"')); return m ? m[1] : null; }
+var PUBLICAS=['./','calculadora/','pro/'];
+prueba('Sitio', 'Todas las páginas existen, están en español de Chile y tienen un solo <h1>', function(){
+  return leerPaginas().then(function(ps){
+    ps.forEach(function(h, i){
+      var r=PAGINAS[i].ruta;
+      verdadero(h!=null, 'falta la página '+r);
+      verdadero(/<html lang="es-CL">/.test(h), r+': el idioma debe ser es-CL');
+      igual((h.match(/<h1[\s>]/g)||[]).length, 1, r+': cantidad de <h1>');
+      verdadero(/<title>[^<]+<\/title>/.test(h) && meta(h,'name','description'), r+': falta el título o la descripción');
+    });
+  });
+});
+prueba('Sitio', 'Portada, calculadora y Pro tienen título, descripción, dirección canónica e imagen para compartir', function(){
+  return Promise.all(PUBLICAS.map(leerWeb).concat([leer('web/iconos/og-finiqa-1200x630.png')])).then(function(r){
+    verdadero(r[3]!=null, 'falta iconos/og-finiqa-1200x630.png');
+    PUBLICAS.forEach(function(ruta, i){
+      var h=r[i], title=(h.match(/<title>([^<]+)<\/title>/)||[])[1]||'', desc=meta(h,'name','description')||'';
+      verdadero(/Finiqa/.test(title) && title.length<=65, ruta+': título «'+title+'»');
+      verdadero(desc.length>=120 && desc.length<=160, ruta+': la descripción debe tener entre 120 y 160 caracteres (tiene '+desc.length+')');
+      igual(meta(h,'property','og:image'), '%URL_BASE%iconos/og-finiqa-1200x630.png', ruta+': og:image');
+      igual(meta(h,'property','og:image:alt'), 'Finiqa: un solo número para las dos partes', ruta+': texto alternativo de la imagen');
+      igual(meta(h,'name','twitter:card'), 'summary_large_image', ruta+': twitter:card');
+      igual(meta(h,'name','twitter:image'), '%URL_BASE%iconos/og-finiqa-1200x630.png', ruta+': twitter:image');
+      igual(meta(h,'property','og:url'), '%URL_BASE%'+(ruta==='./'?'':ruta), ruta+': og:url');
+      ['og:title','og:description','og:locale'].forEach(function(k){ verdadero(meta(h,'property',k), ruta+': falta '+k); });
+    });
+  });
+});
+prueba('Sitio', 'Los enlaces internos son relativos y llevan a páginas o archivos que existen', function(){
+  return leerPaginas().then(function(ps){
+    var revisar=[];
+    ps.forEach(function(h, i){
+      var base=PAGINAS[i].ruta;
+      referencias(h, base).forEach(function(x){
+        verdadero(x.texto.charAt(0)!=='/', base+': ruta absoluta '+x.texto);
+        revisar.push(leerWeb(x.ruta).then(function(t){ verdadero(t!=null, base+': el enlace '+x.texto+' no lleva a nada'); }));
+      });
+      (h.match(/href="#[^"]+"/g)||[]).forEach(function(a){
+        var id=a.slice(7,-1);
+        verdadero(h.indexOf('id="'+id+'"')>=0, base+': el enlace #'+id+' no tiene destino');
+      });
+    });
+    return Promise.all(revisar);
+  });
+});
+prueba('Privacidad', 'Ninguna página pide recursos a otros sitios (solo la calculadora consulta mindicador.cl)', function(){
+  var js=['web/calculadora/interfaz.js','web/portada.js','web/sw.js'];
+  return Promise.all([leerPaginas(), Promise.all(js.map(leer))]).then(function(r){
+    r[0].forEach(function(h, i){
+      verdadero(!/<(?:script|img|iframe|source|video|audio)[^>]+src="https?:/i.test(h), PAGINAS[i].ruta+': carga un archivo de otro sitio');
+      verdadero(!/<link[^>]+href="https?:/i.test(h), PAGINAS[i].ruta+': enlaza una hoja o tipografía de otro sitio');
+      verdadero(!/url\(\s*["']?https?:/i.test(h), PAGINAS[i].ruta+': estilo con un archivo de otro sitio');
+    });
+    r[1].forEach(function(t, i){
+      (t.match(/https?:\/\/[^'"\s)]+/g)||[]).forEach(function(u){ verdadero(/^https:\/\/mindicador\.cl\//.test(u), js[i]+' se conecta a '+u); });
+    });
+  });
+});
+prueba('Sitio', 'La portada no carga el lector de PDF ni el motor de cálculo', function(){
+  return Promise.all([leerWeb('./'), leer('web/portada.js')]).then(function(r){
+    var scripts=(r[0].match(/<script[^>]+src="[^"]+"/g)||[]).join(' ');
+    verdadero(!/pdfjs|motor\//.test(scripts) && !/pdfjs|motor\/|createElement\('script'\)/.test(r[1]), 'la portada no debe cargar pdf.js ni el motor');
+  });
+});
+prueba('Sitio', 'La calculadora nombra «calculadora de finiquito» y Chile en título, H1 y pie', function(){
+  return leerWeb('calculadora/').then(function(h){
+    var title=(h.match(/<title>([^<]+)<\/title>/)||[])[1]||'', h1=texto((h.match(/<h1[\s\S]*?<\/h1>/)||[''])[0]), pie=texto((h.match(/<footer[\s\S]*?<\/footer>/)||[''])[0]);
+    [['título',title],['H1',h1],['pie',pie]].forEach(function(x){ verdadero(/calculadora de finiquito/i.test(x[1]) && /Chile/.test(x[1]), x[0]+': «'+x[1].trim()+'»'); });
+    verdadero(/Chile/.test(meta(h,'name','description')) && /finiquito/.test(meta(h,'name','description')), 'descripción');
+  });
+});
+prueba('Accesibilidad', 'Los campos de la calculadora tienen etiqueta y los botones tienen nombre', function(){
+  return leerWeb('calculadora/').then(function(h){
+    (h.match(/<(?:input|select|textarea)\b[^>]*>/g)||[]).forEach(function(tag){
+      if(/type="(?:radio|checkbox)"/.test(tag)) return; // van dentro de su <label>
+      var id=(tag.match(/\bid="([^"]+)"/)||[])[1];
+      verdadero(id, 'campo sin id: '+tag);
+      verdadero(/aria-label(?:ledby)?="/.test(tag) || h.indexOf('for="'+id+'"')>=0, 'el campo '+id+' no tiene etiqueta');
+    });
+    (h.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)||[]).forEach(function(b){
+      verdadero(/type="button"/.test(b), 'botón sin type="button": '+b.slice(0,60));
+      verdadero(texto(b).trim() || /aria-label="/.test(b), 'botón sin nombre: '+b.slice(0,60));
+    });
+  });
+});
+prueba('Accesibilidad', 'Chips de fundamentos con aria-pressed y paso actual con aria-current', function(){
+  return Promise.all([leerWeb('./'), leerWeb('calculadora/'), leer('web/calculadora/interfaz.js')]).then(function(r){
+    var chips=(r[0].match(/<div class="fundamentos-chips"[\s\S]*?<\/div>/)||[''])[0].match(/<button[^>]*>/g)||[];
+    igual(chips.length, 5, 'chips de fundamentos');
+    chips.forEach(function(b){ verdadero(/type="button"/.test(b) && /aria-pressed="(true|false)"/.test(b) && /aria-controls="/.test(b), 'chip sin aria-pressed: '+b); });
+    igual((r[1].match(/class="paso-btn" data-ir="\d"/g)||[]).length, 5, 'botones de pasos');
+    verdadero(/setAttribute\('aria-current','step'\)/.test(r[2]), 'el paso actual debe marcarse con aria-current="step"');
+  });
+});
+prueba('Sitio', 'Los fundamentos de la portada coinciden con el motor (fin de obra y topes)', function(){
+  var Mo=root.FiniqaMotor;
+  return leerWeb('./').then(function(h){
+    var obra=texto((h.match(/<div class="fundamento" id="fund-obra">[\s\S]*?<\/div>/)||[''])[0]);
+    var ias=texto((h.match(/<div class="fundamento" id="fund-ias">[\s\S]*?<\/div>/)||[''])[0]);
+    // Días por mes según la fecha de ingreso, tal como los calcula el motor.
+    [['2019-06-03','1 día antes de julio de 2020'],['2021-01-04','1,5 hasta junio de 2021'],['2021-09-01','2 en el segundo semestre de 2021'],['2023-03-01','2,5 desde 2022']].forEach(function(c){
+      var R=Mo.estimar({tipo:'obra', causal:'159_5', fechaIngreso:c[0], fechaTermino:'2024-06-28', sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)});
+      var linea=R.L.filter(function(x){ return x.label==='Indemnización por término de obra'; })[0];
+      verdadero(linea, 'el motor no calculó fin de obra para '+c[0]);
+      var dias=c[1].split(' ')[0];
+      verdadero(linea.how.indexOf('<b>'+dias+' días</b>')>=0, 'el motor usa otro valor para '+c[0]+': '+linea.how);
+      verdadero(obra.indexOf(c[1])>=0, 'la portada debe decir «'+c[1]+'»');
+    });
+    var antes=Mo.estimar({tipo:'obra', causal:'159_5', fechaIngreso:'2018-06-01', fechaTermino:'2024-06-28', sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)});
+    verdadero(!antes.L.some(function(x){ return x.label==='Indemnización por término de obra'; }) && /anteriores a 2019 no tienen/.test(obra), 'contratos por obra anteriores a 2019');
+    ['90 UF','11 años','14 de agosto de 1981','fracción superior a 6 meses'].forEach(function(f){ verdadero(ias.indexOf(f)>=0, 'años de servicio: falta «'+f+'»'); });
+  });
+});
 })(typeof self!=='undefined' ? self : globalThis);

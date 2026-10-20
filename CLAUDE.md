@@ -22,6 +22,12 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 6. Términos, privacidad (Ley 21.719) y metadatos para Google (hecho: `web/terminos.html`, `web/privacidad.html`; dirección y contacto en `sitio.json`).
 7. Publicar y verificar.
 
+## Etapa 2 (marca, estructura y diseño)
+- Rutas: `/` portada, `/calculadora/` la app, `/pro/` Finiqa Pro, `/terminos/` y `/privacidad/`.
+- Términos y privacidad no se publican ni se enlazan mientras `sitio.json` no tenga responsable y correo: los enlaces van entre `<!-- legal -->` y `<!-- /legal -->` (en `sw.js`, con `// legal`).
+- El paso a paso es solo presentación: todos los campos y sus `id` siguen en la página (la comparación en vivo con la v8 los usa).
+- Los textos de "¿De dónde sale cada número?" en la portada salen del motor y esperan revisión legal; si cambia una regla, actualizarlos (hay una prueba que los compara).
+
 ## Entorno
 - Sin Node.js local: las pruebas corren en GitHub Actions (Node y Chrome) y en el navegador (`pruebas/index.html`).
 - Servidor local sin caché: `python3 pruebas/servidor-local.py` (puerto 8642). Con `http.server` normal el navegador guarda copias viejas de los archivos.
