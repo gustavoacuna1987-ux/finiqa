@@ -466,6 +466,7 @@
           <button type="button" id="btnImprimir" class="boton mediano" hidden>Imprimir o guardar PDF</button>
           <span id="toast" class="toast" role="status"></span>
         </div>
+        <p class="fine noprint" id="imprimirNota" hidden>En la app instalada del iPhone no se puede imprimir. Para imprimir o guardar en PDF, abre Finiqa en Safari y usa el botón «Imprimir o guardar PDF» (ahí tendrás que ingresar tus datos de nuevo, porque la app y Safari no comparten lo guardado).</p>
       </section>
 
       <section class="tarjeta res-cmp" aria-labelledby="hCmp">
@@ -528,10 +529,14 @@
   </div>
 </footer>
 
+<!-- Resumen para imprimir o guardar en PDF: lo arma informe.js y solo se ve al imprimir -->
+<div id="informe" class="informe"></div>
+
 <!-- Motor de cálculo y lector de liquidaciones (sin interfaz) -->
 <script src="../motor/calculo.js"></script>
 <script src="../motor/lector.js"></script>
 <!-- Interfaz -->
+<script src="informe.js"></script>
 <script src="interfaz.js"></script>
 </body>
 </html>

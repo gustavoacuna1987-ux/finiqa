@@ -286,4 +286,14 @@ prueba('Sitio', 'Los fundamentos de la portada coinciden con el motor (fin de ob
     verdadero(/^6 años/.test(anios('2025-07-01')), '6 meses y 1 día deben sumar un año: '+anios('2025-07-01'));
   });
 });
+prueba('Sitio', 'El resumen para imprimir lleva marca, total, aviso referencial y bases legales', function(){
+  var Mo=root.FiniqaMotor, I=root.FiniqaInforme;
+  verdadero(I && I.armar, 'falta web/calculadora/informe.js');
+  var R=Mo.estimar(Mo.EJEMPLO, {hoy:Date.UTC(2026,9,18)}), h=I.armar(R, {antes:['Revisa tus cotizaciones.'], url:'https://ejemplo.test/calculadora/'});
+  ['Finiqa','Resumen de tu cálculo','Referencial','Total a recibir',Mo.money(R.total),'Datos usados en el cálculo','Detalle y fundamento de cada cifra','Antes de firmar',
+   'artículos 159 a 178 del Código del Trabajo','No reemplaza la revisión de la Dirección del Trabajo','tus datos no salen de tu dispositivo'].forEach(function(f){ verdadero(h.indexOf(f)>=0, 'falta «'+f+'» en el resumen'); });
+  R.L.forEach(function(x){ verdadero(h.indexOf(x.label)>=0 && h.indexOf(Mo.money(x.amount))>=0, 'falta el concepto '+x.label); });
+  verdadero(!/https?:\/\/(?!ejemplo\.test)/.test(h.replace(/xmlns="[^"]+"/g,'')), 'el resumen no debe cargar nada de otros sitios');
+  return leerWeb('calculadora/').then(function(c){ verdadero(/<div id="informe" class="informe"><\/div>/.test(c) && /<script src="informe\.js"><\/script>/.test(c), 'la calculadora debe cargar el resumen'); });
+});
 })(typeof self!=='undefined' ? self : globalThis);
