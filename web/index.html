@@ -6,6 +6,22 @@
 <title>Finiqa · Cálculo de finiquito de referencia en Chile</title>
 <meta name="description" content="Finiqa calcula el finiquito en Chile con el detalle y la base legal de cada cifra. Gratis para trabajadores; Finiqa Pro, para empresas y sindicatos.">
 <link rel="canonical" href="%URL_BASE%">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Finiqa">
+<meta property="og:locale" content="es_CL">
+<meta property="og:title" content="Finiqa · Cálculo de finiquito de referencia en Chile">
+<meta property="og:description" content="Finiqa calcula el finiquito en Chile con el detalle y la base legal de cada cifra. Gratis para trabajadores; Finiqa Pro, para empresas y sindicatos.">
+<meta property="og:url" content="%URL_BASE%">
+<meta property="og:image" content="%URL_BASE%iconos/og-finiqa-1200x630.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Finiqa: un solo número para las dos partes">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="%URL_BASE%iconos/og-finiqa-1200x630.png">
+<meta name="twitter:image:alt" content="Finiqa: un solo número para las dos partes">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"Finiqa","url":"%URL_BASE%","inLanguage":"es-CL","description":"Cálculo de finiquito de referencia en Chile, con el detalle y la base legal de cada cifra."}
+</script>
 <link rel="icon" href="iconos/favicon.ico" sizes="48x48">
 <link rel="icon" href="iconos/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="iconos/favicon.svg" type="image/svg+xml">
@@ -14,18 +30,110 @@
 <meta name="theme-color" content="#0E141B" media="(prefers-color-scheme: dark)">
 <link rel="preload" href="fuentes/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="marca.css">
-<link rel="stylesheet" href="paginas.css">
+<link rel="stylesheet" href="portada.css">
 </head>
 <body>
-<main class="doc contenedor">
-  <p class="antetitulo">Finiqa</p>
-  <h1 class="titulo">Calculadora de finiquito para Chile</h1>
-  <p>Estima cuánto te corresponde al terminar tu contrato, con el detalle y la base legal de cada cifra. Gratis y sin registro: tus datos no salen de tu dispositivo.</p>
-  <p><a class="boton primario grande" href="calculadora/">Calcular mi finiquito</a></p>
+<header class="cabecera cabecera-grande contenedor">
+  <a class="logo" href="./" aria-label="Finiqa, inicio"><svg viewBox="0 0 512 512" aria-hidden="true"><rect class="marca-fondo" width="512" height="512" rx="112"/><path class="marca-boleta" d="M156 104h200v288l-25 20-25-20-25 20-25-20-25 20-25-20-25 20-25-20z"/><g class="marca-lineas" stroke-width="18" stroke-linecap="round" fill="none"><path d="M196 164h120M196 212h84M196 260h120"/><path d="M250 330h66" stroke-width="26"/></g></svg><span>Finiqa</span></a>
+  <nav class="nav" aria-label="Principal">
+    <a class="nav-enlace" href="#fundamentos">Bases legales</a>
+    <a class="nav-enlace" href="pro/">Para empresas y sindicatos</a>
+    <a class="boton primario" href="calculadora/">Calcular gratis</a>
+  </nav>
+</header>
+
+<main class="contenedor portada">
+  <div class="portada-intro">
+    <p class="antetitulo">Cálculo de referencia · Chile</p>
+    <h1 class="titulo titulo-portada"><span class="azul">Un solo número</span> para las dos partes</h1>
+    <p class="bajada">El mismo cálculo y las mismas bases legales, sea que revises lo que te ofrecen o prepares el finiquito de otra persona.</p>
+  </div>
+
+  <!-- Dos caminos, un número -->
+  <div class="caminos">
+    <section class="camino camino-trabajador" aria-labelledby="hTrabajador">
+      <p class="antetitulo">Gratis · Sin registro</p>
+      <h2 id="hTrabajador">Soy trabajador</h2>
+      <p>Verifica lo que te ofrecen antes de firmar, con el detalle y la base legal de cada cifra.</p>
+      <a class="boton primario grande" href="calculadora/">Calcular mi finiquito</a>
+    </section>
+    <div class="conector" aria-hidden="true"></div>
+    <div class="camino-numero">
+      <p class="numero-etiqueta">Referencia Finiqa</p>
+      <p class="numero-monto">$5.368.000</p>
+      <span class="chip chip-grande"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Cuadra para ambos</span>
+      <p class="numero-nota">Ejemplo ilustrativo</p>
+    </div>
+    <div class="conector conector-oscuro" aria-hidden="true"></div>
+    <section class="camino camino-pro" aria-labelledby="hEmpresa">
+      <p class="antetitulo">Finiqa Pro · Próximamente</p>
+      <h2 id="hEmpresa">Soy empresa o sindicato</h2>
+      <p>Calcula, documenta y respalda cada finiquito: documentos, casos guardados e informes de cálculo en PDF.</p>
+      <a class="boton grande" href="pro/">Unirme a la lista de espera</a>
+    </section>
+  </div>
+
+  <!-- Fundamento de cada cifra. Textos redactados a partir del motor de cálculo (web/motor/calculo.js).
+       REVISIÓN LEGAL PENDIENTE: deben revisarse con un abogado laboral antes del lanzamiento público. -->
+  <section class="tarjeta fundamentos" id="fundamentos" aria-labelledby="hFundamentos" data-revision-legal="pendiente">
+    <div class="fundamentos-intro">
+      <h2 id="hFundamentos">¿De dónde sale cada número?</h2>
+      <p>Aquí no hay cajas negras. Toca un concepto y mira el fundamento legal de su cifra.</p>
+      <div class="fundamentos-chips" id="fundChips" hidden>
+        <button type="button" aria-pressed="true" aria-controls="fund-ias">Años de servicio</button>
+        <button type="button" aria-pressed="false" aria-controls="fund-aviso">Aviso previo</button>
+        <button type="button" aria-pressed="false" aria-controls="fund-vac">Vacaciones</button>
+        <button type="button" aria-pressed="false" aria-controls="fund-obra">Fin de obra</button>
+        <button type="button" aria-pressed="false" aria-controls="fund-afc">Seguro de cesantía</button>
+      </div>
+      <p class="fundamentos-fuente">Código del Trabajo y leyes complementarias · UF y UTM al día</p>
+    </div>
+    <div class="fundamentos-paneles" aria-live="polite">
+      <div class="fundamento" id="fund-ias">
+        <p class="fundamento-ref">Art. 163 y 172 · Código del Trabajo</p>
+        <h3>Indemnización por años de servicio</h3>
+        <p>30 días de remuneración por cada año trabajado; la fracción superior a 6 meses cuenta como un año más. Requiere al menos 1 año de servicio y una causal que la otorgue: necesidades de la empresa, desahucio, liquidación de la empresa o autodespido (en este último, con el recargo que fije el tribunal). La remuneración usada como base tiene un tope de 90 UF al mes y se pagan como máximo 11 años, salvo en contratos iniciados antes del 14 de agosto de 1981. En casa particular funciona distinto: el empleador la deposita cada mes en la AFP.</p>
+      </div>
+      <div class="fundamento" id="fund-aviso">
+        <p class="fundamento-ref">Art. 161 y 162 · Código del Trabajo</p>
+        <h3>Indemnización sustitutiva del aviso previo</h3>
+        <p>Si el despido es por necesidades de la empresa o desahucio y el empleador no avisó por escrito con 30 días de anticipación, corresponde un mes de remuneración, con el mismo tope de 90 UF. En la liquidación de la empresa y en el autodespido corresponde siempre.</p>
+      </div>
+      <div class="fundamento" id="fund-vac">
+        <p class="fundamento-ref">Art. 73 · Código del Trabajo</p>
+        <h3>Feriado pendiente</h3>
+        <p>Los días de vacaciones no tomados, incluidos los proporcionales del último año (15 días hábiles al año, más el feriado progresivo si corresponde), se pagan al terminar el contrato. Los días hábiles se convierten a corridos sumando los sábados, domingos y feriados chilenos de ese período. El valor de cada día es el sueldo base, los pagos fijos y el promedio de variables, dividido por 30.</p>
+      </div>
+      <div class="fundamento" id="fund-obra">
+        <p class="fundamento-ref">Ley 21.122</p>
+        <h3>Contratos por obra o faena</h3>
+        <p>Cuando un contrato por obra o faena firmado desde 2019 termina por conclusión de la obra, corresponde una indemnización por cada mes trabajado (la fracción de más de 15 días cuenta como un mes). Los días por mes dependen de la fecha de ingreso: 1 día antes de julio de 2020; 1,5 hasta junio de 2021; 2 en el segundo semestre de 2021, y 2,5 desde 2022. Los contratos anteriores a 2019 no tienen esta indemnización.</p>
+      </div>
+      <div class="fundamento" id="fund-afc">
+        <p class="fundamento-ref">Art. 13 · Ley 19.728</p>
+        <h3>Descuento del aporte del empleador</h3>
+        <p>Si el despido es por necesidades de la empresa, desahucio o conclusión de la obra, el empleador puede descontar de la indemnización lo que aportó a tu cuenta individual del seguro de cesantía. El descuento nunca supera la indemnización, y ese dinero no se pierde: lo retiras en la AFC.</p>
+      </div>
+    </div>
+  </section>
 </main>
-<footer class="pie contenedor">
-  <p>Herramienta referencial basada en los artículos 159 a 178 del Código del Trabajo, la Ley 19.728 (seguro de cesantía) y la Ley 21.122 (obra o faena). No reemplaza la revisión de la Dirección del Trabajo ni la asesoría de un abogado.</p>
-  <!-- legal --><p><a href="terminos/">Términos de uso</a> · <a href="privacidad/">Privacidad</a></p><!-- /legal -->
+
+<!-- Banda de marca: siempre clara, para que el logo conserve su azul -->
+<footer class="pie-marca">
+  <div class="contenedor pie-marca-interior">
+    <div class="pie-marca-logo">
+      <svg viewBox="0 0 512 512" aria-hidden="true"><rect class="marca-fondo" width="512" height="512" rx="112"/><path class="marca-boleta" d="M156 104h200v288l-25 20-25-20-25 20-25-20-25 20-25-20-25 20-25-20z"/><g class="marca-lineas" stroke-width="18" stroke-linecap="round" fill="none"><path d="M196 164h120M196 212h84M196 260h120"/><path d="M250 330h66" stroke-width="26"/></g></svg>
+      <div>
+        <p class="pie-marca-nombre">Finiqa</p>
+        <p class="pie-marca-lema">Que el finiquito <span class="azul">cuadre</span>.</p>
+      </div>
+    </div>
+    <div class="pie-marca-texto">
+      <p>Finiqa es una calculadora de finiquito para Chile, de carácter referencial. No reemplaza la revisión de la Dirección del Trabajo ni la asesoría de un abogado.</p>
+      <p class="pie-enlaces"><!-- legal --><a href="terminos/">Términos de uso</a><a href="privacidad/">Política de privacidad</a><!-- /legal --><span>Tus datos no salen de tu dispositivo</span></p>
+    </div>
+  </div>
 </footer>
+<script src="portada.js"></script>
 </body>
 </html>

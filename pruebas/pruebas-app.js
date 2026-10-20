@@ -76,7 +76,7 @@ prueba('App instalable', 'El manifiesto tiene nombre e íconos que existen', fun
   });
 });
 prueba('Privacidad', 'No se cargan programas ni tipografías de otros sitios', function(){
-  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), Promise.all(['web/marca.css','web/calculadora/calculadora.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
+  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), Promise.all(['web/marca.css','web/portada.css','web/calculadora/calculadora.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
     r[0].forEach(function(h, i){
       verdadero(!/<script[^>]+src="https?:/.test(h), PAGINAS[i].ruta+' carga un script externo');
       verdadero(!/<link[^>]+href="https?:/.test(h), PAGINAS[i].ruta+' carga un archivo de otro sitio');

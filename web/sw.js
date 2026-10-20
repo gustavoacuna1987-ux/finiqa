@@ -4,7 +4,7 @@
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-8';
+var VERSION = 'finiqa-9';
 var ARCHIVOS = [
   './',
   'calculadora/',
@@ -15,6 +15,8 @@ var ARCHIVOS = [
   'terminos/', // legal
   'privacidad/', // legal
   'marca.css',
+  'portada.css',
+  'portada.js',
   'paginas.css',
   'fuentes/Geist-Variable.woff2',
   'fuentes/GeistMono-Variable.woff2',
