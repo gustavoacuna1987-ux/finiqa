@@ -16,7 +16,8 @@ compararlo con la propuesta del empleador antes de firmar.
 | `web/` | El sitio que se publica: portada (`index.html`), calculadora (`calculadora/`), términos (`terminos/`) y privacidad (`privacidad/`). |
 | `web/motor/calculo.js` | Motor de cálculo: todas las reglas del finiquito, sin pantalla. |
 | `web/motor/lector.js` | Lector de liquidaciones: reconoce los conceptos del texto de un PDF. |
-| `web/calculadora/index.html`, `web/calculadora/interfaz.js`, `web/estilos.css` | La calculadora: formulario y resultado. |
+| `web/calculadora/` | La calculadora: paso a paso, boleta en vivo y resultado (`index.html`, `interfaz.js`, `calculadora.css`). |
+| `web/marca.css` | Colores, tipografías, encabezado, botones y pie que comparten todas las páginas. |
 | `web/vendor/pdfjs/` | pdf.js 3.11.174 (Mozilla, Apache 2.0), para leer PDFs en el navegador. Se carga solo al subir un PDF. |
 | `web/fuentes/` | Tipografía Geist (vercel/geist-font v1.7.2, licencia SIL OFL 1.1), incluida para no pedirla a otros sitios. |
 | `web/manifest.webmanifest`, `web/iconos/` | Nombre, colores e íconos para instalar Finiqa como app (`iconos/icono.svg` es el original; `favicon.svg` cambia de color en modo oscuro). |

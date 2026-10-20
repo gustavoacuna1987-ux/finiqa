@@ -18,7 +18,7 @@ function archivosOffline(){
     return m[1].match(/'[^']+'/g).map(function(s){ return s.slice(1,-1); });
   });
 }
-// Dirección dentro de web/ de un enlace relativo escrito en la página "base" ("../estilos.css" en "calculadora/" -> "estilos.css").
+// Dirección dentro de web/ de un enlace relativo escrito en la página "base" ("../marca.css" en "calculadora/" -> "marca.css").
 function resolver(base, ref){
   var dir=(base==='./'?'':base).split('/').filter(Boolean), r=ref.split('?')[0], carpeta=/\/$/.test(r)||r==='.'||r==='..';
   r.split('/').forEach(function(p){ if(p==='..') dir.pop(); else if(p && p!=='.') dir.push(p); });
@@ -76,7 +76,7 @@ prueba('App instalable', 'El manifiesto tiene nombre e íconos que existen', fun
   });
 });
 prueba('Privacidad', 'No se cargan programas ni tipografías de otros sitios', function(){
-  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), Promise.all(['web/marca.css','web/estilos.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
+  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), Promise.all(['web/marca.css','web/calculadora/calculadora.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
     r[0].forEach(function(h, i){
       verdadero(!/<script[^>]+src="https?:/.test(h), PAGINAS[i].ruta+' carga un script externo');
       verdadero(!/<link[^>]+href="https?:/.test(h), PAGINAS[i].ruta+' carga un archivo de otro sitio');
