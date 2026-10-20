@@ -19,7 +19,7 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 3. Pruebas automáticas que reproducen los resultados de la v8 (hecho: `pruebas/`).
 4. Interfaz con el motor, PWA instalable sin internet, rutas relativas (sirven en github.io y en un dominio futuro) (hecho: `web/sw.js`, `web/manifest.webmanifest`).
 5. GitHub Actions: pruebas, publicación en GitHub Pages y actualización diaria de UF y UTM (mindicador.cl) con respaldo a la tabla incluida (hecho: `.github/workflows/publicar.yml`, https://gustavoacuna1987-ux.github.io/finiqa/).
-6. Términos, privacidad (Ley 21.719) y metadatos para Google.
+6. Términos, privacidad (Ley 21.719) y metadatos para Google (hecho: `web/terminos.html`, `web/privacidad.html`; dirección y contacto en `sitio.json`).
 7. Publicar y verificar.
 
 ## Entorno

@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Finiqa · Calculadora de finiquito",
   "short_name": "Finiqa",
-  "description": "Estima tu finiquito en Chile con los datos de tu liquidación de sueldo. Tus datos no salen de tu dispositivo.",
+  "description": "Calcula gratis tu finiquito en Chile: años de servicio, aviso previo, vacaciones y descuentos, a partir de tu liquidación. Tus datos no salen de tu dispositivo.",
   "lang": "es-CL",
   "dir": "ltr",
   "start_url": "./",

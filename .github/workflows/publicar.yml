@@ -57,10 +57,13 @@ jobs:
       - name: Pruebas
         run: node pruebas/correr-node.js
 
+      - name: Preparar el sitio (dirección y contacto desde sitio.json)
+        run: python3 herramientas/preparar-sitio.py _sitio
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: web
+          path: _sitio
       - name: Publicar en GitHub Pages
         id: despliegue
         uses: actions/deploy-pages@v4
