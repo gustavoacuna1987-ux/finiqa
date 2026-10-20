@@ -8,8 +8,8 @@ var VERSION = 'finiqa-4';
 var ARCHIVOS = [
   './',
   'index.html',
-  'terminos.html',
-  'privacidad.html',
+  'terminos.html', // legal
+  'privacidad.html', // legal
   'estilos.css',
   'paginas.css',
   'fuentes/Geist-Variable.woff2',

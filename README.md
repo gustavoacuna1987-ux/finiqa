@@ -23,7 +23,7 @@ compararlo con la propuesta del empleador antes de firmar.
 | `web/terminos.html`, `web/privacidad.html` | Términos de uso y política de privacidad (Ley 19.628 y Ley 21.719). |
 | `web/sitemap.xml`, `web/robots.txt`, `web/iconos/compartir.png` | Mapa del sitio para Google e imagen que aparece al compartir el enlace. |
 | `sitio.json` | Dirección del sitio, responsable y correo de contacto. Para pasar a un dominio propio se cambia solo `urlBase`. |
-| `herramientas/preparar-sitio.py` | Antes de publicar, escribe los datos de `sitio.json` en las páginas (no publica si falta el contacto). |
+| `herramientas/preparar-sitio.py` | Antes de publicar, escribe los datos de `sitio.json` en las páginas. Si faltan el responsable o el correo, publica el resto del sitio sin términos ni privacidad y quita sus enlaces (lo marcado con `<!-- legal -->` o `// legal`). |
 | `web/datos/indicadores.json` | UF (último día de cada mes) y UTM, actualizadas a diario desde mindicador.cl. |
 | `herramientas/actualizar-indicadores.js` | Programa que actualiza ese archivo (lo corre GitHub Actions cada mañana). |
 | `web/sw.js` | Service worker: guarda la app en el dispositivo para usarla sin internet. |

@@ -131,12 +131,18 @@ prueba('Datos para Google', 'El mapa del sitio incluye todas las páginas', func
     });
   });
 });
-prueba('Datos para Google', 'La dirección del sitio y el contacto están en sitio.json', function(){
-  return leer('sitio.json').then(function(t){
-    var c=JSON.parse(t);
+// Sin responsable y correo en sitio.json, preparar-sitio.py no publica términos ni privacidad y quita lo marcado como legal.
+prueba('Términos y privacidad', 'Sin responsable y correo no se publican: todo enlace a ellas está marcado como legal', function(){
+  return Promise.all([leer('sitio.json'), leerPaginas(), leer('web/sitemap.xml'), leer('web/sw.js')]).then(function(r){
+    var c=JSON.parse(r[0]);
     verdadero(/^https:\/\/\S+\/$/.test(c.urlBase), 'urlBase debe empezar con https:// y terminar en /');
-    verdadero(c.responsable && c.responsable.trim(), 'falta el responsable en sitio.json');
-    verdadero(/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(c.contacto||''), 'falta un correo de contacto válido en sitio.json');
+    verdadero('responsable' in c && 'contacto' in c, 'sitio.json debe tener los campos responsable y contacto');
+    var legales=['terminos.html','privacidad.html'];
+    function sinBloques(t){ return t.replace(/<!-- legal -->[\s\S]*?<!-- \/legal -->/g,'').replace(/^.*\/\/ legal[ \t]*$/mg,''); }
+    var fuera=r[1].filter(function(h, i){ return legales.indexOf(PAGINAS[i])<0; }).concat([r[2], r[3]]);
+    fuera.forEach(function(t){
+      legales.forEach(function(p){ verdadero(sinBloques(t).indexOf(p)<0, p+' aparece fuera de un bloque marcado como legal'); });
+    });
   });
 });
 })(typeof self!=='undefined' ? self : globalThis);
