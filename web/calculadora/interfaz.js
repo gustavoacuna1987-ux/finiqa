@@ -299,9 +299,22 @@ $('btnCopiar').addEventListener('click', function(){
   }catch(e){ fallback(); }
 });
 
-// Imprimir solo funciona al abrir el archivo directamente (no dentro de un visor)
+// Imprimir solo funciona al abrir el archivo directamente (no dentro de un visor).
+// En la app instalada del iPhone (navigator.standalone) Safari ignora window.print(): ahí el botón comparte el resumen.
 var topLevel=false; try{ topLevel = window.self===window.top; }catch(e){}
-if(topLevel){
+var appIphone = navigator.standalone===true;
+if(topLevel && appIphone){
+  $('imprimirNota').hidden=false;
+  if(navigator.share){
+    $('btnImprimir').textContent='Compartir resumen';
+    $('btnImprimir').hidden=false;
+    $('btnImprimir').addEventListener('click', function(){
+      navigator.share({title:'Estimación de finiquito', text:Mo.resumenTexto(lastR)}).catch(function(e){
+        if(!e || e.name!=='AbortError') showToastNear('No se pudo compartir. Usa «Copiar resumen».');
+      });
+    });
+  }
+} else if(topLevel){
   $('btnImprimir').hidden=false;
   $('btnImprimir').addEventListener('click', function(){ window.print(); });
   window.addEventListener('beforeprint', function(){ document.querySelectorAll('#resGroups details').forEach(function(d){ d.open=true; }); });
