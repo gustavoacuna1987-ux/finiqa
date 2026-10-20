@@ -62,7 +62,7 @@ iframe.v8{width:1px;height:1px;border:0;position:absolute;left:-9999px}
 (function(){
   var v='?t='+Date.now();
   var lista=['../web/vendor/pdfjs/pdf.min.js','../web/vendor/pdfjs/pdf.worker.min.js',
-    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'../herramientas/actualizar-indicadores.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-app.js'+v,'pruebas-indicadores.js'+v];
+    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'../web/calculadora/informe.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'../herramientas/actualizar-indicadores.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-app.js'+v,'pruebas-indicadores.js'+v];
   function sig(i){
     if(i>=lista.length){ window.iniciarPruebas(); return; }
     var s=document.createElement('script'); s.src=lista[i];

@@ -10,6 +10,7 @@ var pdfjsLib = require('../web/vendor/pdfjs/pdf.min.js');
 
 globalThis.FiniqaMotor = require('../web/motor/calculo.js');
 globalThis.FiniqaLector = require('../web/motor/lector.js');
+globalThis.FiniqaInforme = require('../web/calculadora/informe.js');
 globalThis.Pruebas = require('./marco.js');
 globalThis.FiniqaCasos = require('./casos.js');
 globalThis.FiniqaEsperados = require('./esperados.js');

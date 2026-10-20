@@ -149,6 +149,13 @@ function render(){
   $('resAvisos').innerHTML = W.length ? W.map(function(w){ return '<li class="'+w[0]+'"><span class="pill">'+labels[w[0]]+'</span><span>'+w[1]+'</span></li>'; }).join('') : '<li><span class="pill">Ok</span><span>No vemos nada inusual con los datos ingresados.</span></li>';
 
   lastR=R;
+  renderInforme(R);
+}
+// Resumen imprimible ("Resumen de tu cálculo"): se rehace con cada cálculo para que imprimir siempre esté al día.
+function renderInforme(R){
+  if(!window.FiniqaInforme) return;
+  var antes=Array.prototype.map.call(document.querySelectorAll('.antes .checks li span'), function(s){ return s.innerHTML; });
+  $('informe').innerHTML=window.FiniqaInforme.armar(R, {manual:manual, antes:antes, url:location.href.split('#')[0].split('?')[0]});
 }
 var ICONO_AVISO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18.2v.1"/></svg>';
 var ICONO_OK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -317,7 +324,6 @@ if(topLevel && appIphone){
 } else if(topLevel){
   $('btnImprimir').hidden=false;
   $('btnImprimir').addEventListener('click', function(){ window.print(); });
-  window.addEventListener('beforeprint', function(){ document.querySelectorAll('#resGroups details').forEach(function(d){ d.open=true; }); });
 }
 
 // Barra móvil: se oculta cuando la boleta en vivo está a la vista
