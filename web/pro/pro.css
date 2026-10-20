@@ -1,0 +1,16 @@
+/* Finiqa Pro: página mínima con la lista de espera. Usa los colores y componentes de marca.css. */
+.pro{display:flex;flex-direction:column;gap:32px;padding-top:16px;padding-bottom:56px}
+.pro-intro{display:flex;flex-direction:column;gap:14px;max-width:860px}
+.pro-funciones{list-style:none;margin:0;padding:0;display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:1000px){.pro-funciones{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:560px){.pro-funciones{grid-template-columns:minmax(0,1fr)}}
+.pro-funciones .tarjeta{display:flex;flex-direction:column;gap:10px;padding:28px}
+.pro-funciones svg{width:32px;height:32px;fill:none;stroke:var(--brand);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pro-funciones h3{margin:0;font-size:20px;line-height:1.2;letter-spacing:-.02em}
+.pro-funciones p{color:var(--muted)}
+.pro-gratis{display:flex;gap:12px;align-items:flex-start;padding:18px 20px;border-radius:16px;background:var(--chip);color:var(--chipText);font-size:16px;font-weight:500}
+.pro-gratis svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.pro-espera{max-width:640px}
+.pro-espera p{color:var(--proMuted)}
+.pro-espera a{color:inherit}
+.pro-espera .boton{align-self:flex-start}

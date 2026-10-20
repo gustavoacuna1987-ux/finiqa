@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>%URL_BASE%</loc></url>
   <url><loc>%URL_BASE%calculadora/</loc></url>
+  <url><loc>%URL_BASE%pro/</loc></url>
   <!-- legal -->
   <url><loc>%URL_BASE%terminos/</loc></url>
   <url><loc>%URL_BASE%privacidad/</loc></url>

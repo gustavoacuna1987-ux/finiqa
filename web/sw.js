@@ -1,16 +1,19 @@
-/* Finiqa · Service worker: guarda el sitio (portada, calculadora y páginas legales) en el dispositivo para usarlo sin internet.
+/* Finiqa · Service worker: guarda el sitio (portada, calculadora, Pro y páginas legales) en el dispositivo para usarlo sin internet.
  * - Archivos propios: primero se piden a la red (así siempre llega la versión nueva) y, si no hay
  *   conexión o tarda más de 4 segundos, se usa la copia guardada.
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-6';
+var VERSION = 'finiqa-7';
 var ARCHIVOS = [
   './',
   'calculadora/',
   'calculadora/interfaz.js',
+  'pro/',
+  'pro/pro.css',
   'terminos/', // legal
   'privacidad/', // legal
+  'marca.css',
   'estilos.css',
   'paginas.css',
   'fuentes/Geist-Variable.woff2',

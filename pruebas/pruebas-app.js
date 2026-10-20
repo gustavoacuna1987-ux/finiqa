@@ -5,7 +5,7 @@
 var P=root.Pruebas, prueba=P.prueba, igual=P.igual, verdadero=P.verdadero;
 function leer(r){ return root.FiniqaEntorno.leerTexto(r); }
 // Páginas del sitio: dirección dentro de web/ (como la guarda sw.js) y si es una página legal.
-var PAGINAS=[{ruta:'./'}, {ruta:'calculadora/'}, {ruta:'terminos/', legal:true}, {ruta:'privacidad/', legal:true}];
+var PAGINAS=[{ruta:'./'}, {ruta:'calculadora/'}, {ruta:'pro/'}, {ruta:'terminos/', legal:true}, {ruta:'privacidad/', legal:true}];
 var LEGALES=PAGINAS.filter(function(p){ return p.legal; }).map(function(p){ return p.ruta; });
 // Archivo dentro de web/ que corresponde a una dirección ("calculadora/" -> "calculadora/index.html").
 function archivo(ruta){ return ruta==='./' ? 'index.html' : (/\/$/.test(ruta) ? ruta+'index.html' : ruta); }
@@ -76,19 +76,19 @@ prueba('App instalable', 'El manifiesto tiene nombre e íconos que existen', fun
   });
 });
 prueba('Privacidad', 'No se cargan programas ni tipografías de otros sitios', function(){
-  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), leer('web/estilos.css')]).then(function(r){
+  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), Promise.all(['web/marca.css','web/estilos.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
     r[0].forEach(function(h, i){
       verdadero(!/<script[^>]+src="https?:/.test(h), PAGINAS[i].ruta+' carga un script externo');
       verdadero(!/<link[^>]+href="https?:/.test(h), PAGINAS[i].ruta+' carga un archivo de otro sitio');
     });
-    verdadero(!/url\(\s*["']?https?:/.test(r[3]), 'estilos.css carga un archivo de otro sitio');
+    verdadero(!/url\(\s*["']?https?:/.test(r[3]), 'una hoja de estilos carga un archivo de otro sitio');
     verdadero(!/cdnjs|jsdelivr|unpkg|googleapis|gstatic|googletagmanager|google-analytics/.test(r[0].join('')+r.slice(1).join('')), 'hay una referencia a un servicio externo');
   });
 });
 prueba('App instalable', 'Las tipografías incluidas existen y se guardan para usar sin internet', function(){
-  return Promise.all([leer('web/estilos.css'), archivosOffline()]).then(function(r){
+  return Promise.all([leer('web/marca.css'), archivosOffline()]).then(function(r){
     var urls=(r[0].match(/url\("([^"]+)"\)/g)||[]).map(function(u){ return u.slice(5,-2); });
-    verdadero(urls.length>=2, 'estilos.css debe declarar las tipografías');
+    verdadero(urls.length>=2, 'marca.css debe declarar las tipografías');
     return Promise.all(urls.map(function(u){
       verdadero(r[1].indexOf(u)>=0, u+' no está en la lista de sw.js');
       return leer('web/'+u).then(function(t){ verdadero(t!=null, 'falta web/'+u); });

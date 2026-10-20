@@ -10,17 +10,24 @@
 <link rel="icon" href="../iconos/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="../iconos/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../iconos/apple-touch-icon.png">
-<meta name="theme-color" content="#1D5BA6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#EFF2F6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E141B" media="(prefers-color-scheme: dark)">
 <link rel="preload" href="../fuentes/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../estilos.css">
+<link rel="stylesheet" href="../marca.css">
 <link rel="stylesheet" href="../paginas.css">
 </head>
 <body>
-<main class="doc">
+<header class="cabecera contenedor">
+  <a class="logo" href="../" aria-label="Finiqa, inicio"><svg viewBox="0 0 512 512" aria-hidden="true"><rect class="marca-fondo" width="512" height="512" rx="112"/><path class="marca-boleta" d="M156 104h200v288l-25 20-25-20-25 20-25-20-25 20-25-20-25 20-25-20z"/><g class="marca-lineas" stroke-width="18" stroke-linecap="round" fill="none"><path d="M196 164h120M196 212h84M196 260h120"/><path d="M250 330h66" stroke-width="26"/></g></svg><span>Finiqa</span></a>
+  <nav class="nav" aria-label="Principal">
+    <a class="nav-enlace" href="../pro/">Para empresas y sindicatos</a>
+    <span class="chip">Gratis · Sin registro</span>
+  </nav>
+</header>
+<main class="doc contenedor">
   <a class="volver" href="../calculadora/">← Volver a la calculadora</a>
-  <p class="eyebrow">Finiqa</p>
-  <h1>Términos de uso</h1>
+  <p class="antetitulo">Finiqa</p>
+  <h1 class="titulo">Términos de uso</h1>
   <p class="meta">Última actualización: 18 de octubre de 2026</p>
 
   <div class="resumen">
@@ -54,5 +61,11 @@
 
   <p class="meta" style="margin-top:36px">Ver también: <a href="../privacidad/">Política de privacidad</a>.</p>
 </main>
+<footer class="pie">
+  <div class="contenedor pie-interior">
+    <div><p>Finiqa es una calculadora de finiquito para Chile, de carácter referencial. No reemplaza la revisión de la Dirección del Trabajo ni la asesoría de un abogado.</p></div>
+    <!-- legal --><p class="pie-enlaces"><a href="../terminos/">Términos de uso</a><a href="../privacidad/">Política de privacidad</a></p><!-- /legal -->
+  </div>
+</footer>
 </body>
 </html>
