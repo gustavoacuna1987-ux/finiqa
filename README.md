@@ -4,7 +4,7 @@ Calculadora de finiquito para Chile, pensada para personas que no son expertas e
 Estima lo que corresponde al terminar un contrato a partir de la liquidación de sueldo y permite
 compararlo con la propuesta del empleador antes de firmar.
 
-**Usar la calculadora:** https://gustavoacuna1987-ux.github.io/finiqa/
+**Usar la calculadora:** https://finiqa.cl/calculadora/
 
 - Los datos se procesan solo en el navegador: nada se envía ni se guarda en servidores.
 - Resultado referencial, basado en el Código del Trabajo. No reemplaza la asesoría de la Dirección del Trabajo ni de un abogado.
