@@ -62,7 +62,7 @@ iframe.v8{width:1px;height:1px;border:0;position:absolute;left:-9999px}
 (function(){
   var v='?t='+Date.now();
   var lista=['../web/vendor/pdfjs/pdf.min.js','../web/vendor/pdfjs/pdf.worker.min.js',
-    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'../web/calculadora/informe.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'../herramientas/actualizar-indicadores.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-app.js'+v,'pruebas-indicadores.js'+v];
+    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'../web/motor/ocr.js'+v,'../web/calculadora/lector-imagen.js'+v,'../web/calculadora/informe.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'../herramientas/actualizar-indicadores.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-ocr.js'+v,'pruebas-app.js'+v,'pruebas-indicadores.js'+v];
   function sig(i){
     if(i>=lista.length){ window.iniciarPruebas(); return; }
     var s=document.createElement('script'); s.src=lista[i];
@@ -114,17 +114,28 @@ var hechas=[];
 window.Pruebas.correr(function(r){ hechas.push(r); $('resumen').textContent='Corriendo pruebas… '+hechas.length+' de '+window.Pruebas.lista.length; })
   .then(function(res){
     mostrar($('lista'), res); resumen($('resumen'), res, 'pruebas'); window.resultadoPruebas=res;
-    // Modo automático (?vivo=1): también compara en vivo con la v8 y con la nueva pantalla, y deja el veredicto en #ci (lo lee GitHub Actions).
+    // Modo automático (?vivo=1): también compara en vivo con la v8 y con la nueva pantalla, y deja el veredicto en #ci
+    // y en el título de la página ("CI:OK …" o "CI:FALLA …"), que GitHub Actions consulta a Chrome hasta que aparece.
     if(!/[?&]vivo=1/.test(location.search)) return;
-    var malas=res.filter(function(r){ return !r.ok; }).length, lineas=['Pruebas automáticas: '+(res.length-malas)+'/'+res.length];
+    var fallas=[], lineas=[];
+    function sumar(titulo, r){
+      r.forEach(function(x){ if(!x.ok) fallas.push(x.grupo+' › '+x.nombre+': '+x.error); });
+      lineas.push(titulo+': '+r.filter(function(x){ return x.ok; }).length+'/'+r.length);
+    }
+    function veredicto(extra){
+      var ok=!fallas.length && !extra;
+      var ci=document.createElement('pre'); ci.id='ci'; ci.textContent=(ok?'OK':'FALLA')+'\n'+lineas.concat(extra?[extra]:[], fallas).join('\n');
+      document.body.appendChild(ci);
+      document.title='CI:'+ci.textContent.replace(/\n/g,' · ');
+    }
+    sumar('Pruebas automáticas', res);
     return comparar('../referencia/calculadora_v8.html', 'la v8 original').then(function(v){
-      malas+=v.filter(function(r){ return !r.ok; }).length; lineas.push('Comparación con la v8: '+v.filter(function(r){ return r.ok; }).length+'/'+v.length);
+      sumar('Comparación con la v8', v);
       return comparar('../web/calculadora/index.html', 'la nueva pantalla');
     }).then(function(v){
-      malas+=v.filter(function(r){ return !r.ok; }).length; lineas.push('Comparación con la nueva pantalla: '+v.filter(function(r){ return r.ok; }).length+'/'+v.length);
-      var ci=document.createElement('pre'); ci.id='ci'; ci.textContent=(malas?'FALLA':'OK')+'\n'+lineas.join('\n');
-      document.body.appendChild(ci);
-    });
+      sumar('Comparación con la nueva pantalla', v);
+      veredicto();
+    }, function(e){ veredicto('Error en la comparación en vivo: '+((e && e.message) || e)); });
   });
 
 // Comparación en vivo

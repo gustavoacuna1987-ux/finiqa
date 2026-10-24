@@ -10,6 +10,7 @@ var pdfjsLib = require('../web/vendor/pdfjs/pdf.min.js');
 
 globalThis.FiniqaMotor = require('../web/motor/calculo.js');
 globalThis.FiniqaLector = require('../web/motor/lector.js');
+globalThis.FiniqaOcr = require('../web/motor/ocr.js');
 globalThis.FiniqaInforme = require('../web/calculadora/informe.js');
 globalThis.Pruebas = require('./marco.js');
 globalThis.FiniqaCasos = require('./casos.js');
@@ -23,6 +24,7 @@ globalThis.FiniqaEntorno = {
 };
 require('./pruebas-motor.js');
 require('./pruebas-lector.js');
+require('./pruebas-ocr.js');
 require('./pruebas-app.js');
 require('./pruebas-indicadores.js');
 

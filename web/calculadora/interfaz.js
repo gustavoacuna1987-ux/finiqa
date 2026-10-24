@@ -1,6 +1,6 @@
 /* Finiqa · Interfaz.
  * Lee el formulario, le pide el cálculo al motor (motor/calculo.js) y muestra el resultado.
- * La lectura de liquidaciones usa motor/lector.js. Aquí no hay reglas de cálculo. */
+ * La lectura de liquidaciones usa motor/lector.js (y lector-imagen.js cuando el PDF es una imagen). Aquí no hay reglas de cálculo. */
 (function(){
 'use strict';
 var Mo=window.FiniqaMotor, Lx=window.FiniqaLector;
@@ -379,25 +379,38 @@ function processQueue(){
     imp.errors.push('“'+esc(name)+'” no es un PDF.'); imp.queue.shift(); processQueue(); return;
   }
   setImpStatus('Leyendo “'+esc(name)+'”…','');
+  var imagen=false;
   q.file.arrayBuffer()
     .then(function(buf){
       return getPdfJs().catch(function(){ throw {code:'lib'}; }).then(function(L){
         return Lx.abrirPdf(L, new Uint8Array(buf), q.pwd);
       });
     })
-    .then(Lx.pdfRows)
+    .then(function(pdf){
+      // Sin texto: la liquidación viene como imagen y se lee con OCR.
+      return Lx.pdfRows(pdf).then(function(rows){
+        if(rows.length) return rows;
+        imagen=true;
+        return FiniqaLectorImagen.leer(pdf, function(a){
+          if(a.etapa==='preparando') setImpStatus('Leyendo “'+esc(name)+'”: es una imagen. Preparando el lector de imágenes (solo la primera vez descarga unos 5 MB)…','');
+          else setImpStatus('Leyendo la imagen de “'+esc(name)+'”'+(a.paginas>1?' (página '+a.pagina+' de '+a.paginas+')':'')+'… '+Math.round(a.avance*100)+' %','');
+        }).catch(function(){ throw {code:'ocr'}; });
+      });
+    })
     .then(function(rows){
       imp.queue.shift();
       var p=Lx.parseLiq(rows);
-      if(!rows.length) imp.errors.push('“'+esc(name)+'” no tiene texto que se pueda leer: parece una foto o un escaneo. Descarga la liquidación en PDF desde el portal de tu empresa o ingresa los montos a mano.');
+      // En una imagen, si no aparece nada de una liquidación, lo leído son restos (bordes, manchas): se avisa igual que sin texto.
+      if(!rows.length || (imagen && !p.items.length && !p.totalHab)) imp.errors.push('“'+esc(name)+'” no tiene texto que se pueda leer: es una imagen y no logramos reconocer una liquidación en ella. Descarga la liquidación desde el portal de tu empresa o ingresa los montos a mano.');
       else if(!p.items.length && !p.totalHab) imp.errors.push('En “'+esc(name)+'” no encontramos conceptos de una liquidación (sueldo base, gratificación…).');
-      else imp.files.push(Lx.nuevoArchivo(name, p, imp.seq++));
+      else { var f=Lx.nuevoArchivo(name, p, imp.seq++); f.imagen=imagen; imp.files.push(f); }
       processQueue();
     })
     .catch(function(e){
       if(e && e.name==='PasswordException'){ askPwd(q, e.code===2); return; }
       imp.queue.shift();
       if(e && e.code==='lib'){ imp.queue=[]; setImpStatus('No se pudo cargar el lector de PDF. Recarga la página e inténtalo de nuevo.','bad'); return; }
+      if(e && e.code==='ocr'){ imp.errors.push('“'+esc(name)+'” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.'); processQueue(); return; }
       imp.errors.push('No se pudo leer “'+esc(name)+'”. Puede estar dañado.');
       processQueue();
     });
@@ -427,6 +440,7 @@ function renderReview(){
   files.forEach(function(f){
     var fi=imp.files.indexOf(f);
     h+='<div class="imp-file"><h3>'+esc(f.name)+(f.p.periodo?' <small>· '+Lx.periodoTxt(f.p.periodo)+'</small>':'')+' <span class="leida">· leída en tu navegador</span>'+(f===latest&&files.length>1?' <span class="tag">Más reciente</span>':'')+'</h3>';
+    if(f.imagen) h+='<p class="hint">Este PDF es una imagen: reconocimos sus letras automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
     if(f.p.items.length){
       h+='<div class="cmp-wrap"><table class="imp"><thead><tr><th>Concepto en tu liquidación</th><th style="text-align:right">Monto</th><th>Usar como</th></tr></thead><tbody>';
       f.p.items.forEach(function(it,i){
@@ -439,9 +453,9 @@ function renderReview(){
   });
   // Datos adicionales
   var X=Lx.extras(imp.files), ex=[];
-  if(X.fechaIngreso) ex.push('<label class="check"><input type="checkbox" id="impFecha" checked><span>Fecha de ingreso: <strong>'+X.fechaIngreso.split('-').reverse().join('-')+'</strong></span></label>');
+  if(X.fechaIngreso) ex.push('<label class="check"><input type="checkbox" id="impFecha" checked><span>Fecha de ingreso: <strong>'+X.fechaIngreso.split('-').reverse().join('-')+'</strong>'+(X.fechaDeContrato?'<small class="imp-aviso">Tu liquidación la llama «fecha de contrato». Revisa que sea el día en que empezaste a trabajar en la empresa: si firmaste un contrato nuevo después (por ejemplo, de plazo fijo a indefinido), tu fecha de ingreso es anterior.</small>':'')+'</span></label>');
   if(X.afp) ex.push('<label class="check"><input type="checkbox" id="impAfp" checked><span>AFP: <strong>'+AFP[X.afp][0]+'</strong></span></label>');
-  if(X.contrato) ex.push('<label class="check"><input type="checkbox" id="impContrato" checked><span>Tipo de contrato: <strong>'+{indefinido:'Indefinido',plazo:'Plazo fijo',obra:'Obra o faena'}[X.contrato]+'</strong>'+(X.contratoInferido?' (lo deducimos porque te descuentan seguro de cesantía)':'')+'</span></label>');
+  if(X.contrato) ex.push('<label class="check"><input type="checkbox" id="impContrato" checked><span>Tipo de contrato: <strong>'+{indefinido:'Indefinido',plazo:'Plazo fijo',obra:'Obra o faena'}[X.contrato]+'</strong>'+(X.contratoInferido?' (lo deducimos porque te descuentan seguro de cesantía)':'')+(X.cesantiaAbreviada?'<small class="imp-aviso">En tu liquidación el descuento aparece como «S/C», que suele ser el seguro de cesantía. Confírmalo: si no lo es, revisa el tipo de contrato.</small>':'')+'</span></label>');
   if(X.vacSaldo!=null) ex.push('<label class="check"><input type="checkbox" id="impVac" checked><span>Saldo de vacaciones: <strong>'+num(X.vacSaldo)+' días</strong></span></label>');
   if(X.diasParciales) ex.push('<label class="check"><input type="checkbox" id="impEscala" checked><span>Tu liquidación más reciente muestra <strong>'+num(X.diasParciales)+' días trabajados</strong>, así que los montos fijos son proporcionales. Llevarlos a un mes completo (30 días).</span></label>');
   if(ex.length) h+='<div class="imp-file"><h3>Otros datos encontrados</h3><div class="imp-extras">'+ex.join('')+'</div></div>';

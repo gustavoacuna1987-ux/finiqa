@@ -4,13 +4,14 @@
  * - Nada más pasa por aquí: los datos de la persona no salen del navegador.
  * Todas las rutas son relativas a esta carpeta: funciona igual en github.io/finiqa/ y en un dominio propio. */
 'use strict';
-var VERSION = 'finiqa-12';
+var VERSION = 'finiqa-13';
 var ARCHIVOS = [
   './',
   'calculadora/',
   'calculadora/interfaz.js',
   'calculadora/calculadora.css',
   'calculadora/informe.js',
+  'calculadora/lector-imagen.js',
   'pro/',
   'pro/pro.css',
   'terminos/', // legal
@@ -23,6 +24,7 @@ var ARCHIVOS = [
   'fuentes/GeistMono-Variable.woff2',
   'motor/calculo.js',
   'motor/lector.js',
+  'motor/ocr.js',
   'datos/indicadores.json',
   'vendor/pdfjs/pdf.min.js',
   'vendor/pdfjs/pdf.worker.min.js',
@@ -37,6 +39,8 @@ var ARCHIVOS = [
   'iconos/favicon.ico',
   'iconos/og-finiqa-1200x630.png'
 ];
+// El lector de imágenes (vendor/tesseract/, unos 5 MB) no está en la lista para no descargarlo a todos: se guarda
+// la primera vez que alguien sube un PDF que es una imagen (redPrimero guarda todo archivo propio que pasa por aquí).
 var ESPERA_RED = 4000;
 
 self.addEventListener('install', function(e){

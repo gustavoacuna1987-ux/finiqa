@@ -16,11 +16,13 @@ compararlo con la propuesta del empleador antes de firmar.
 | `web/` | El sitio que se publica: portada (`index.html`), calculadora (`calculadora/`), términos (`terminos/`) y privacidad (`privacidad/`). |
 | `web/motor/calculo.js` | Motor de cálculo: todas las reglas del finiquito, sin pantalla. |
 | `web/motor/lector.js` | Lector de liquidaciones: reconoce los conceptos del texto de un PDF. |
-| `web/calculadora/` | La calculadora: paso a paso, boleta en vivo y resultado (`index.html`, `interfaz.js`, `calculadora.css`). |
+| `web/motor/ocr.js` | Ordena el texto reconocido en una imagen (OCR) en filas iguales a las de un PDF con texto, para que el lector las entienda. |
+| `web/calculadora/` | La calculadora: paso a paso, boleta en vivo y resultado (`index.html`, `interfaz.js`, `calculadora.css`). `lector-imagen.js` lee los PDFs que traen la liquidación como imagen (sin texto). |
 | `web/marca.css` | Colores, tipografías, encabezado, botones y pie que comparten todas las páginas. |
 | `web/index.html`, `web/portada.css`, `web/portada.js` | Portada: dos caminos (trabajador y empresa o sindicato) y «¿De dónde sale cada número?». Los fundamentos están pendientes de revisión legal. |
 | `web/pro/` | Finiqa Pro: página mínima; la lista de espera está en «Próximamente» y no envía datos. |
 | `web/vendor/pdfjs/` | pdf.js 3.11.174 (Mozilla, Apache 2.0), para leer PDFs en el navegador. Se carga solo al subir un PDF. |
+| `web/vendor/tesseract/` | Tesseract.js 7.0.0 y su diccionario de español (Apache 2.0), para reconocer el texto de PDFs que son una imagen. Se descarga (unos 5 MB) solo la primera vez que alguien sube un PDF así. Origen y huellas en `LEEME.txt`. |
 | `web/fuentes/` | Tipografías Geist y Geist Mono (vercel/geist-font v1.7.2, licencia SIL OFL 1.1), incluidas para no pedirlas a otros sitios. |
 | `web/manifest.webmanifest`, `web/iconos/` | Nombre, colores e íconos para instalar Finiqa como app (`iconos/icono.svg` es el original; `favicon.svg` cambia de color en modo oscuro). |
 | `web/terminos/`, `web/privacidad/` | Términos de uso y política de privacidad (Ley 19.628 y Ley 21.719). |
@@ -37,22 +39,26 @@ compararlo con la propuesta del empleador antes de firmar.
 
 Las pruebas revisan que el motor y el lector den exactamente lo mismo que la v8 original:
 72 casos (causales, fracción de 6 meses, menos de un año, fin de obra, vacaciones, UTM y descuentos,
-comparación con la propuesta), 6 lecturas de liquidaciones en PDF con datos inventados y revisiones
+comparación con la propuesta), 6 lecturas de liquidaciones en PDF con datos inventados, la lectura
+de un PDF que es una imagen (con OCR, solo en el navegador) y revisiones
 de la app instalable (archivos para usar sin internet, rutas relativas, sin programas de otros sitios)
 y del sitio (títulos, imagen para compartir, enlaces, un solo H1, accesibilidad básica y que los
 fundamentos de la portada coincidan con el motor).
 
-- **En GitHub:** corren solas en cada cambio (pestaña *Actions*), en Node y en Chrome.
+- **En GitHub:** corren solas en cada cambio (pestaña *Actions*), en Node y en Chrome (`pruebas/correr-chrome.py`
+  abre la página de pruebas en Chrome sin ventana y espera su veredicto; también se puede correr en local).
 - **En el navegador:** abre `pruebas/index.html` desde un servidor. En local:
   `python3 pruebas/servidor-local.py` y luego http://localhost:8642/pruebas/.
   El botón *Comparar con la v8 original* abre la v8 y la nueva pantalla de forma invisible y compara cada caso.
 - `pruebas/esperados.js` se genera con el botón *Generar resultados esperados desde la v8*; no se edita a mano.
-- `pruebas/pdfs-sinteticos/generar.py` crea los PDFs de ejemplo.
+- `pruebas/pdfs-sinteticos/generar.py` crea los PDFs de ejemplo. El que es una imagen (`liquidacion-imagen.pdf`)
+  se dibuja con Chrome, así que para ese necesita Google Chrome instalado.
 
 ## App instalable y sin internet
 
 - Se instala desde el navegador (botón *Instalar app* en Android o Chrome; en iPhone, Compartir › Agregar a pantalla de inicio).
-- Después de la primera visita funciona sin conexión, incluida la lectura de PDFs.
+- Después de la primera visita funciona sin conexión, incluida la lectura de PDFs. El lector de imágenes
+  (para PDFs que son una foto de la liquidación) se guarda la primera vez que se usa; desde ahí también funciona sin conexión.
 - Con conexión siempre se usa la versión más nueva; la copia guardada se usa si no hay red o si tarda más de 4 segundos.
 - Al instalarla se abre la calculadora (`calculadora/`); el service worker guarda también la portada y las páginas legales.
 - Todas las rutas son relativas: la misma carpeta `web/` sirve en `github.io/finiqa/` y en un dominio propio, sin cambiar nada.

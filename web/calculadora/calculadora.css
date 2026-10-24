@@ -130,6 +130,7 @@ table.imp{width:100%;border-collapse:collapse;font-size:14px;min-width:460px}
 .imp td small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .imp select{min-height:40px;font-size:14px;padding:6px 30px 6px 10px;width:auto;max-width:200px;border-radius:10px}
 .imp-extras{display:grid;gap:8px}
+.imp-aviso{display:block;margin-top:4px;font-size:13px;line-height:1.4;color:var(--muted)}
 .imp-check{font-size:14px;line-height:1.5;padding:10px 12px;border-radius:10px;background:var(--surface)}
 .imp-check.good{background:var(--goodSoft)}
 .imp-check.warn{background:var(--warn);color:var(--warnText)}
