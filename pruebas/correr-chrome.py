@@ -32,7 +32,8 @@ def titulo():
 def main():
     chrome = (sys.argv[1] if len(sys.argv) > 1 else None) or shutil.which('google-chrome') \
         or '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-    with tempfile.TemporaryDirectory() as perfil:
+    # Chrome puede seguir escribiendo en su perfil unos instantes después de cerrarse: no es un error.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as perfil:
         proc = subprocess.Popen([chrome, '--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run',
                                  '--remote-debugging-port=%d' % PUERTO, '--user-data-dir=' + perfil, URL],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
