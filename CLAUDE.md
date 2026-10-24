@@ -33,3 +33,5 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 - Servidor local sin caché: `python3 pruebas/servidor-local.py` (puerto 8642). Con `http.server` normal el navegador guarda copias viejas de los archivos.
 - Si un cambio de reglas es intencional, los resultados esperados se actualizan a propósito (y se avisa al dueño); `pruebas/esperados.js` hoy refleja la v8.
 - GitHub CLI en `~/.local/bin/gh`, sesión iniciada como `gustavoacuna1987-ux`.
+- Pruebas completas en local como en GitHub: con el servidor local andando, `python3 pruebas/correr-chrome.py`. No usar `--virtual-time-budget`: no espera al lector de imágenes (Tesseract trabaja en segundo plano).
+- PDFs que son imagen: se leen con Tesseract.js (`web/vendor/tesseract/`, viene del prototipo de cámara) en `web/calculadora/lector-imagen.js` y `web/motor/ocr.js`. Para probar con documentos reales, servirlos desde fuera del repositorio.

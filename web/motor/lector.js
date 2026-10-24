@@ -1,7 +1,10 @@
 /* Finiqa · Lector de liquidaciones de sueldo.
  * Módulo puro: recibe el texto que pdf.js extrae del PDF y reconoce los conceptos (sueldo base,
  * gratificación, comisiones…). No toca la pantalla. Todo ocurre en el navegador: nada se envía.
- * Reglas copiadas de referencia/calculadora_v8.html sin cambios.
+ * Reglas copiadas de referencia/calculadora_v8.html. Agregadas después (aprobadas por el dueño el 24-10-2026):
+ *   «Monto horas extras» y «Monto h.menos» son conceptos que no entran en la base (y cuentan para cuadrar con el total),
+ *   la «fecha de contrato» se usa como fecha de ingreso si no hay otra, y «S/C» se reconoce como seguro de cesantía;
+ *   las dos últimas se muestran con un aviso para que la persona las confirme.
  * Funciona en el navegador (window.FiniqaLector, requiere FiniqaMotor) y en Node (require). */
 (function(root, factory){
   if(typeof module==='object' && module.exports) module.exports = factory(require('./calculo.js'));
@@ -80,7 +83,7 @@ function segments(tokens, descX){
     var money=s.nums.filter(function(x){ return RE_MONEY.test(x); });
     var label=s.lab.join(' ').replace(/^[\s.:\-–()]+|[\s.:\-–(]+$/g,'');
     var last=money.length ? money[money.length-1] : '';
-    return {label:label, n:norm(label), x:s.x, amount: last ? parseMoney(last) : 0, plain: !!last && last.indexOf('.')<0};
+    return {label:label, n:norm(label), x:s.x, amount: last ? parseMoney(last) : 0, plain: !!last && last.indexOf('.')<0, negativo: last.charAt(0)==='-'};
   });
 }
 
@@ -88,6 +91,7 @@ var DEST = [['sueldoBase','Sueldo base'],['bonosFijos','Pago fijo mensual'],['gr
 var RULES = [
   [/semana corrida/, 'var', ''],
   [/comision|incentivo|variable|premio|bono (de |por )?(produccion|productividad|ventas?|metas?|cumplimiento|desempeno|gestion|resultados?)/, 'var', ''],
+  [/\bh\.? ?menos|horas? (no trabajadas|descontadas|menos)|atrasos?\b|inasistencias?/, 'skip', 'Descuento por horas no trabajadas: no cambia la base del cálculo'],
   [/horas? extra|sobretiempo|hh\.? ?ee|h\.? ?extra|recargo/, 'skip', 'La ley no las incluye en la base (art. 172)'],
   [/asig(nacion)?\.? ?fam|cargas? familiar/, 'skip', 'La ley no la incluye en la base (art. 172)'],
   [/gratificacion.*anual|aguinaldo|fiestas patrias|gift ?card|navidad|bono (de )?(vacaciones|fiestas|escolaridad|anual|termino|fin de ano)|retroactiv|reliquidacion|bono unico/, 'skip', 'Pago esporádico o anual: no entra en la base'],
@@ -99,7 +103,11 @@ var RULES = [
   [/bono|asignacion|asig\.|bonificacion|participacion/, 'bonosFijos', 'Revisa que lo recibas todos los meses por el mismo monto']
 ];
 var RE_TOT=/^(sub ?)?total|liquido|alcance|a pagar|a recibir|^base |\btope\b|^renta |^monto /;
-var RE_DESC=/^ant\b|desempleo|\bafp\b|fonasa|isapre|salud|cesantia|\bafc\b|impuesto|anticipo|prestamo|ccaf|caja (de )?compensacion|la araucana|los andes|los heroes|18 de septiembre|\bapv\b|ahorro|cuenta 2|sindica|cuota|descuento|retencion|seguro|dental|mutual|pension|\bsis\b|credito|cotizacion|aporte/;
+// Algunas liquidaciones anteponen "Monto" a un concepto ("Monto horas extras", "Monto h.menos"): esos no son totales.
+var RE_MONTO_CONCEPTO=/^monto (h\.? ?menos|horas?|hh|h\.? ?extra|sobretiempo|atrasos?|inasistencias?)\b/;
+// "S/C": abreviatura habitual del seguro de cesantía (por ejemplo, "S/C TRABAJADOR MODELO").
+var RE_SC=/^s ?\/ ?c\b/;
+var RE_DESC=/^ant\b|^s ?\/ ?c\b|desempleo|\bafp\b|fonasa|isapre|salud|cesantia|\bafc\b|impuesto|anticipo|prestamo|ccaf|caja (de )?compensacion|la araucana|los andes|los heroes|18 de septiembre|\bapv\b|ahorro|cuenta 2|sindica|cuota|descuento|retencion|seguro|dental|mutual|pension|\bsis\b|credito|cotizacion|aporte/;
 var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
 function parseLiq(rows){
@@ -128,7 +136,7 @@ function parseLiq(rows){
       var inDesc = mode==='desc' || (descX!==null && sg.x>=descX);
       var enSeccion = mode==='hab' || descX!==null;
       if(enSeccion) seccionVista=true;
-      if(RE_TOT.test(sg.n) || /haberes|imponible|tributable/.test(sg.n) && !/^(colacion|movilizacion)/.test(sg.n)){
+      if((RE_TOT.test(sg.n) && !RE_MONTO_CONCEPTO.test(sg.n)) || /haberes|imponible|tributable/.test(sg.n) && !/^(colacion|movilizacion)/.test(sg.n)){
         if(sg.amount){
           if(/total/.test(sg.n) && /imponible/.test(sg.n) && !/no imponible/.test(sg.n)) P.totalImp=P.totalImp||sg.amount;
           else if(/total (de )?haberes|total remuneracion|remuneracion bruta|total bruto/.test(sg.n) && !/imponible/.test(sg.n)) P.totalHab=P.totalHab||sg.amount;
@@ -137,6 +145,8 @@ function parseLiq(rows){
       }
       if(inDesc || RE_DESC.test(sg.n)){
         if(/cesantia|desempleo|\bafc\b/.test(sg.n) && sg.amount>0){ P.cesantia=true; if(/indefinido/.test(sg.n)) P.contratoDesc='indefinido'; }
+        // Solo con la abreviatura se pide confirmar que sea el seguro de cesantía.
+        else if(RE_SC.test(sg.n) && sg.amount>0 && !P.cesantia){ P.cesantia=true; P.cesantiaAbreviada=true; }
         return;
       }
       if(!sg.amount) return;
@@ -149,7 +159,7 @@ function parseLiq(rows){
       }
       // Un mismo concepto con el mismo monto (por ejemplo, en un resumen y en el detalle) se considera una sola vez
       var key=sg.n.replace(/[\d.,%]+/g,' ').replace(/\s+/g,' ').trim()+'|'+sg.amount; if(seen[key]) return; seen[key]=1;
-      P.items.push({label:sg.label, amount:sg.amount, dest:dest, nota:nota, known:known, sec:enSeccion, revisar: !known || dest==='bonosFijos'});
+      P.items.push({label:sg.label, amount:sg.negativo ? -sg.amount : sg.amount, dest:dest, nota:nota, known:known, sec:enSeccion, revisar: !known || dest==='bonosFijos'});
     });
   });
   // Un concepto desconocido mayor que el total de haberes no puede ser un haber
@@ -173,6 +183,11 @@ function parseLiq(rows){
     var y=+m[3]; if(y<100) y+= y>40?1900:2000;
     var d=Date.UTC(y,+m[2]-1,+m[1]);
     if(+m[2]>=1 && +m[2]<=12 && +m[1]>=1 && +m[1]<=31 && y>1950) P.fechaIngreso=iso(d);
+  }
+  // Sin fecha de ingreso, se usa la "fecha de contrato" y se pide confirmarla (puede ser la de un contrato posterior).
+  if(!P.fechaIngreso && (m=full.match(/fecha\s*(?:de(?:l)?\s*)?contrato\s*:?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/))){
+    var yc=+m[3]; if(yc<100) yc+= yc>40?1900:2000;
+    if(+m[2]>=1 && +m[2]<=12 && +m[1]>=1 && +m[1]<=31 && yc>1950){ P.fechaIngreso=iso(Date.UTC(yc,+m[2]-1,+m[1])); P.fechaDeContrato=true; }
   }
   if((m=full.match(/(?:saldo\s*(?:de\s*)?(?:vacaciones|feriado)|(?:vacaciones|feriado)\s*(?:pendientes?|disponibles?)|dias\s*(?:de\s*)?vacaciones\s*(?:pendientes?|disponibles?))\s*:?\s*(\d+(?:[.,]\d+)?)/))){
     P.vacSaldo=parseFloat(m[1].replace(',','.'));
@@ -223,9 +238,13 @@ function chequeo(f){
 // Otros datos encontrados (fecha de ingreso, AFP, contrato, vacaciones, días trabajados).
 function extras(files){
   var sorted=sortedFiles(files), latest=sorted[0];
-  var fecha=null, afp=null, contrato=null, inferido=false;
-  sorted.forEach(function(f){ fecha=fecha||f.p.fechaIngreso; afp=afp||f.p.afp; if(!contrato && f.p.contrato){ contrato=f.p.contrato; inferido=!!f.p.contratoInferido; } });
-  return {fechaIngreso:fecha, afp:(afp && Motor.AFP[afp]) ? afp : null, contrato:contrato, contratoInferido:inferido,
+  var fecha=null, deContrato=false, afp=null, contrato=null, inferido=false, abreviado=false;
+  sorted.forEach(function(f){
+    if(!fecha && f.p.fechaIngreso){ fecha=f.p.fechaIngreso; deContrato=!!f.p.fechaDeContrato; }
+    afp=afp||f.p.afp;
+    if(!contrato && f.p.contrato){ contrato=f.p.contrato; inferido=!!f.p.contratoInferido; abreviado=inferido && !!f.p.cesantiaAbreviada; }
+  });
+  return {fechaIngreso:fecha, fechaDeContrato:deContrato, afp:(afp && Motor.AFP[afp]) ? afp : null, contrato:contrato, contratoInferido:inferido, cesantiaAbreviada:abreviado,
     vacSaldo: latest.p.vacSaldo, diasParciales: (latest.p.dias && latest.p.dias<30) ? latest.p.dias : null};
 }
 function factorEscala(latest, escalar){ return escalar && latest.p.dias>0 && latest.p.dias<30 ? 30/latest.p.dias : 1; }

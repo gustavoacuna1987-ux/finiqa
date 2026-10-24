@@ -33,12 +33,4 @@ jobs:
         run: |
           python3 pruebas/servidor-local.py &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8642/pruebas/index.html > /dev/null && break; sleep 0.5; done
-          google-chrome --headless=new --no-sandbox --disable-gpu --no-first-run \
-            --virtual-time-budget=120000 --dump-dom "http://127.0.0.1:8642/pruebas/index.html?vivo=1" > dom.html 2> chrome.log || true
-          sed -n '/<pre id="ci">/,/<\/pre>/p' dom.html
-          if ! grep -q '<pre id="ci">OK' dom.html; then
-            echo "Las pruebas en el navegador fallaron o no terminaron."
-            grep -o 'class="resumen[^"]*">[^<]*' dom.html || true
-            tail -n 20 chrome.log || true
-            exit 1
-          fi
+          python3 pruebas/correr-chrome.py google-chrome

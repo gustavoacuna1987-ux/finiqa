@@ -75,13 +75,22 @@ prueba('App instalable', 'El manifiesto tiene nombre e íconos que existen', fun
     return Promise.all(man.icons.map(function(i){ return leer('web/'+i.src).then(function(x){ verdadero(x!=null, 'falta el ícono '+i.src); }); }));
   });
 });
+// Tesseract.js trae por defecto direcciones de una red de distribución (CDN): todas se reemplazan por archivos de la app.
+prueba('Privacidad', 'El lector de imágenes usa solo archivos incluidos en la app', function(){
+  return leer('web/calculadora/lector-imagen.js').then(function(t){
+    ['workerPath','corePath','langPath'].forEach(function(k){ verdadero(new RegExp(k+': ?TESS').test(t), 'lector-imagen.js debe fijar '+k+' a vendor/tesseract/'); });
+    return Promise.all(['tesseract.min.js','worker.min.js','tesseract-core-simd-lstm.js','tesseract-core-lstm.js','spa.traineddata.gz'].map(function(a){
+      return leer('web/vendor/tesseract/'+a).then(function(x){ verdadero(x!=null, 'falta web/vendor/tesseract/'+a); });
+    }));
+  });
+});
 prueba('Privacidad', 'No se cargan programas ni tipografías de otros sitios', function(){
-  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), Promise.all(['web/marca.css','web/portada.css','web/calculadora/calculadora.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
+  return Promise.all([leerPaginas(), leer('web/calculadora/interfaz.js'), leer('web/sw.js'), leer('web/calculadora/lector-imagen.js'), Promise.all(['web/marca.css','web/portada.css','web/calculadora/calculadora.css','web/paginas.css','web/pro/pro.css'].map(leer)).then(function(c){ return c.join('\n'); })]).then(function(r){
     r[0].forEach(function(h, i){
       verdadero(!/<script[^>]+src="https?:/.test(h), PAGINAS[i].ruta+' carga un script externo');
       verdadero(!/<link[^>]+href="https?:/.test(h), PAGINAS[i].ruta+' carga un archivo de otro sitio');
     });
-    verdadero(!/url\(\s*["']?https?:/.test(r[3]), 'una hoja de estilos carga un archivo de otro sitio');
+    verdadero(!/url\(\s*["']?https?:/.test(r[4]), 'una hoja de estilos carga un archivo de otro sitio');
     verdadero(!/cdnjs|jsdelivr|unpkg|googleapis|gstatic|googletagmanager|google-analytics/.test(r[0].join('')+r.slice(1).join('')), 'hay una referencia a un servicio externo');
   });
 });

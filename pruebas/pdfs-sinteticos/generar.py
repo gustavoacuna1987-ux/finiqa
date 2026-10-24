@@ -2,9 +2,16 @@
 
 Sirven para probar el lector de liquidaciones sin usar documentos reales.
 No necesita librerías: escribe el PDF a mano (texto en Helvetica).
+El PDF que trae la liquidación como imagen se dibuja con pdf.js en Chrome (sin ventana), así que
+para ese necesita Google Chrome instalado; si no está, los demás se generan igual.
 Uso: python3 pruebas/pdfs-sinteticos/generar.py
 """
+import base64
+import json
 import os
+import shutil
+import subprocess
+import tempfile
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 
@@ -13,8 +20,9 @@ def esc(s):
     return s.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
 
 
-def pdf(nombre, paginas):
-    """paginas: lista de páginas; cada página es una lista de (x, y, texto, negrita) o ('rect', x, y, w, h)."""
+def pdf(nombre, paginas, tamano=(595, 842), guardar=True):
+    """paginas: lista de páginas; cada página es una lista de (x, y, texto, negrita), ('rect', x, y, w, h) o ('caja', x, y, w, h) (solo borde).
+    Devuelve el PDF; con guardar=False no escribe el archivo."""
     objs = []
 
     def add(contenido):
@@ -32,13 +40,16 @@ def pdf(nombre, paginas):
             if e[0] == 'rect':
                 _, x, y, w, h = e
                 ops.append('0.6 g %d %d %d %d re f 0 g' % (x, y, w, h))
+            elif e[0] == 'caja':
+                _, x, y, w, h = e
+                ops.append('0.8 w %s %s %s %s re S' % (x, y, w, h))
             else:
                 x, y, texto, negrita = e
                 ops.append('BT /%s 9 Tf %s %s Td (%s) Tj ET' % ('F2' if negrita else 'F1', x, y, esc(texto)))
         stream = '\n'.join(ops).encode('cp1252')
         c = add(b'<< /Length %d >>\nstream\n' % len(stream) + stream + b'\nendstream')
-        p = add(('<< /Type /Page /Parent %d 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> /Contents %d 0 R >>'
-                 % (pags, f1, f2, c)).encode())
+        p = add(('<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %d %d] /Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> /Contents %d 0 R >>'
+                 % (pags, tamano[0], tamano[1], f1, f2, c)).encode())
         kids.append(p)
     objs[cat - 1] = ('<< /Type /Catalog /Pages %d 0 R >>' % pags).encode()
     objs[pags - 1] = ('<< /Type /Pages /Kids [%s] /Count %d >>' % (' '.join('%d 0 R' % k for k in kids), len(kids))).encode()
@@ -53,8 +64,10 @@ def pdf(nombre, paginas):
     for o in offs:
         out += b'%010d 00000 n \n' % o
     out += b'trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n' % (len(objs) + 1, cat, xref)
-    with open(os.path.join(AQUI, nombre), 'wb') as fh:
-        fh.write(out)
+    if guardar:
+        with open(os.path.join(AQUI, nombre), 'wb') as fh:
+            fh.write(out)
+    return bytes(out)
 
 
 def filas(y0, paso, lineas, xs):
@@ -165,9 +178,117 @@ def escaneo():
     pdf('escaneo-sin-texto.pdf', [[('rect', 40, 600, 500, 200), ('rect', 40, 400, 300, 100)]])
 
 
+# 5) PDF que trae la liquidación como imagen (sin texto), como lo entregan algunos sistemas de sueldos:
+#    hoja carta dibujada a 96 ppp, con dos copias iguales (empleador y trabajador) y tablas con bordes.
+def copia(y0):
+    e = [
+        (20, y0, 'COMERCIAL EJEMPLO LIMITADA', True), (20, y0 - 11, 'AVENIDA FICTICIA 100', True),
+        (20, y0 - 22, 'CIUDAD EJEMPLO', True), (20, y0 - 33, '0760000000', True),
+        (180, y0 - 33, 'LIQUIDACION DE SUELDOS  SEPTIEMBRE de 2026', True),
+        (20, y0 - 44, 'TRABAJADOR : 066666666-6 PERSONA FICTICIA SEIS', True),
+        (20, y0 - 55, 'LABOR : BODEGA       CENTROCOSTO : LOGISTICA', True),
+        (20, y0 - 66, 'LOCAL :CENTRAL', True), (230, y0 - 66, 'FECHA CONTRATO : 01-04-2022', True),
+    ]
+    # Encabezado de la tabla: una caja por columna
+    cols = [(15, 185, 'HABERES', 80), (200, 45, 'BASE', 210), (245, 53, 'MONTO', 255),
+            (298, 182, 'DESCUENTOS', 360), (480, 50, 'BASE', 492), (530, 65, 'MONTO', 545)]
+    for x, w, t, tx in cols:
+        e += [('caja', x, y0 - 84, w, 14), (tx, y0 - 80, t, False)]
+    f, _ = filas(y0 - 94, 13, [
+        ('SUELDO MENSUAL', '30,0', '600.000', 'AFP CAPITAL', '11,44', '92.121'),
+        ('MONTO HORAS EXTRAS', '0,50', '4.200', 'FONASA', '7,00', '56.368'),
+        ('BONO RESPONSABILIDAD', '', '40.000', 'S/C TRABAJADOR CAPITAL', '', '4.832'),
+        ('GRATIFICACION LEGAL', '', '161.050', 'ANT SEP.2026', '1/1', '20.000'),
+    ], [20, 215, 255, 302, 492, 545])
+    e += f
+    e += [(20, y0 - 146, 'TOTAL HABERES IMPONIBLES', True), (255, y0 - 146, '805.250', True),
+          (20, y0 - 159, 'MOVILIZACION (F)', False), (258, y0 - 159, '25.000', False)]
+    # Totales en cajas al pie
+    e += [('caja', 15, y0 - 216, 283, 14), (20, y0 - 212, 'TOTAL HABERES GENERALES', True), (255, y0 - 212, '830.250', True),
+          ('caja', 298, y0 - 216, 297, 14), (302, y0 - 212, 'TOTAL DESCUENTOS GENERALES', True), (545, y0 - 212, '173.321', True),
+          (302, y0 - 225, 'LIQUIDO A PAGO', True), (545, y0 - 225, '656.929', True),
+          (20, y0 - 238, 'SON :SEISCIENTOS CINCUENTA Y SEIS MIL NOVECIENTOS VEINTINUEVE PESOS', False),
+          (20, y0 - 250, 'Certifico que he recibido el saldo indicado en la presente liquidacion', False),
+          (480, y0 - 266, 'RECIBI CONFORME', False)]
+    return e
+
+
+def a_imagen(datos_pdf, ppp):
+    """Dibuja la primera página con pdf.js en Chrome sin ventana. Devuelve (ancho, alto, píxeles RGB comprimidos con zlib)."""
+    chrome = shutil.which('google-chrome') or '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    if not os.path.exists(chrome) and not shutil.which(chrome):
+        return None
+    pdfjs = 'file://' + os.path.abspath(os.path.join(AQUI, '..', '..', 'web', 'vendor', 'pdfjs'))
+    html = """<!DOCTYPE html><meta charset="utf-8"><pre id="out">PENDIENTE</pre>
+<script src="%s/pdf.min.js"></script><script src="%s/pdf.worker.min.js"></script>
+<script>
+var datos=Uint8Array.from(atob('%s'), function(c){ return c.charCodeAt(0); });
+pdfjsLib.getDocument({data:datos, isEvalSupported:false}).promise.then(function(pdf){ return pdf.getPage(1); }).then(function(pg){
+  var vp=pg.getViewport({scale:%s/72}), c=document.createElement('canvas');
+  c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+  var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+  return pg.render({canvasContext:ctx, viewport:vp}).promise.then(function(){
+    var d=ctx.getImageData(0,0,c.width,c.height).data, rgb=new Uint8Array(c.width*c.height*3);
+    for(var i=0,j=0;i<d.length;i+=4){ rgb[j++]=d[i]; rgb[j++]=d[i+1]; rgb[j++]=d[i+2]; }
+    return new Response(new Blob([rgb]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer();
+  }).then(function(z){
+    var b=new Uint8Array(z), s=''; for(var i=0;i<b.length;i+=8192) s+=String.fromCharCode.apply(null, b.subarray(i,i+8192));
+    document.getElementById('out').textContent='OK'+JSON.stringify({w:c.width, h:c.height, z:btoa(s)});
+  });
+}).catch(function(e){ document.getElementById('out').textContent='ERROR '+e; });
+</script>""" % (pdfjs, pdfjs, base64.b64encode(datos_pdf).decode(), ppp)
+    with tempfile.TemporaryDirectory() as tmp:
+        pagina = os.path.join(tmp, 'dibujar.html')
+        with open(pagina, 'w', encoding='utf8') as fh:
+            fh.write(html)
+        r = subprocess.run([chrome, '--headless=new', '--disable-gpu', '--no-first-run', '--user-data-dir=' + os.path.join(tmp, 'perfil'),
+                            '--allow-file-access-from-files', '--virtual-time-budget=20000', '--dump-dom', 'file://' + pagina],
+                           capture_output=True, text=True, timeout=120)
+    ini = r.stdout.find('OK{')
+    if ini < 0:
+        raise RuntimeError('Chrome no pudo dibujar el PDF: ' + r.stdout[r.stdout.find('<pre'):][:300])
+    datos = json.loads(r.stdout[ini + 2:r.stdout.index('}', ini) + 1])
+    return datos['w'], datos['h'], base64.b64decode(datos['z'])
+
+
+def pdf_imagen(nombre, tamano, ancho, alto, zrgb):
+    """Escribe un PDF de una página que solo tiene una imagen (como un escaneo), sin texto."""
+    objs = [
+        b'<< /Type /Catalog /Pages 2 0 R >>',
+        b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        ('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>' % tamano).encode(),
+        ('<< /Type /XObject /Subtype /Image /Width %d /Height %d /BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /FlateDecode /Length %d >>\nstream\n'
+         % (ancho, alto, len(zrgb))).encode() + zrgb + b'\nendstream',
+    ]
+    cont = ('q %d 0 0 %d 0 0 cm /Im0 Do Q' % tamano).encode()
+    objs.append(b'<< /Length %d >>\nstream\n' % len(cont) + cont + b'\nendstream')
+    out = bytearray(b'%PDF-1.4\n%\xe2\xe3\xcf\xd3\n')
+    offs = []
+    for i, o in enumerate(objs, 1):
+        offs.append(len(out))
+        out += b'%d 0 obj\n' % i + o + b'\nendobj\n'
+    xref = len(out)
+    out += b'xref\n0 %d\n0000000000 65535 f \n' % (len(objs) + 1)
+    for o in offs:
+        out += b'%010d 00000 n \n' % o
+    out += b'trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n' % (len(objs) + 1, xref)
+    with open(os.path.join(AQUI, nombre), 'wb') as fh:
+        fh.write(out)
+
+
+def imagen():
+    carta = (612, 792)
+    img = a_imagen(pdf(None, [copia(770) + copia(380)], tamano=carta, guardar=False), 96)
+    if img is None:
+        print('No se encontró Google Chrome: no se generó liquidacion-imagen.pdf')
+        return
+    pdf_imagen('liquidacion-imagen.pdf', carta, *img)
+
+
 if __name__ == '__main__':
     simple()
     dos_columnas()
     mes_parcial()
     escaneo()
+    imagen()
     print('PDFs generados en', AQUI)
