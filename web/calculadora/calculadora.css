@@ -211,7 +211,7 @@ table.imp{width:100%;border-collapse:collapse;font-size:14px;min-width:460px}
 .res-sellos{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .stamp{flex:none;font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--brand);border:1.5px solid var(--brand);border-radius:6px;padding:7px 9px;transform:rotate(-3deg)}
 .meta{font-size:14px;color:var(--muted)}
-.res-principal h2,.res-cmp h2,#resAvisosPanel h2,.antes h2,.res-juicio h2{margin:0;font-size:22px;line-height:1.15;letter-spacing:-.025em}
+.res-principal h2,.res-cmp h2,#resAvisosPanel h2,.antes h2,.res-juicio h2,.res-contacto h2{margin:0;font-size:22px;line-height:1.15;letter-spacing:-.025em}
 .res-cmp h2{font-size:26px;letter-spacing:-.03em}
 .res-principal h2.res-etiqueta{font:400 13px/1.3 var(--mono);letter-spacing:.1em}
 
@@ -265,6 +265,8 @@ table.cmp{width:100%;min-width:520px;border-collapse:collapse;font-size:15px;fon
 
 /* Juicio, avisos y antes de firmar */
 .res-juicio{display:flex;flex-direction:column;gap:10px;background:var(--chip);border-color:transparent}
+.res-contacto{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.res-contacto p{color:var(--muted);line-height:1.55}
 .res-juicio .big{font:600 28px/1.1 var(--mono);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .res-juicio p{font-size:15px}
 #resAvisosPanel{display:flex;flex-direction:column;gap:14px}

@@ -295,6 +295,16 @@ prueba('Sitio', 'Los fundamentos de la portada coinciden con el motor (fin de ob
     verdadero(/^6 años/.test(anios('2025-07-01')), '6 meses y 1 día deben sumar un año: '+anios('2025-07-01'));
   });
 });
+prueba('Sitio', 'Todas las páginas muestran el correo de contacto en el pie, y la calculadora también en el resultado', function(){
+  return leerPaginas().then(function(r){
+    PAGINAS.forEach(function(p, i){
+      var pie=(r[i].match(/<footer[\s\S]*?<\/footer>/)||[''])[0], bloques=(pie.match(/<!-- legal -->[\s\S]*?<!-- \/legal -->/g)||[]).join('');
+      verdadero(/<a href="mailto:%CONTACTO%">Contacto: %CONTACTO%<\/a>/.test(bloques), p.ruta+': falta el contacto en el pie (dentro de un bloque <!-- legal -->)');
+    });
+    var calc=r[1], tarjeta=(calc.match(/<!-- legal --><section class="tarjeta res-contacto[\s\S]*?<!-- \/legal -->/)||[''])[0];
+    verdadero(/href="mailto:%CONTACTO%\?subject=/.test(tarjeta), 'la calculadora debe ofrecer escribir desde el resultado');
+  });
+});
 prueba('Sitio', 'El resumen para imprimir lleva marca, total, aviso referencial y bases legales', function(){
   var Mo=root.FiniqaMotor, I=root.FiniqaInforme;
   verdadero(I && I.armar, 'falta web/calculadora/informe.js');
