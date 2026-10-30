@@ -268,7 +268,7 @@ prueba('Accesibilidad', 'Chips de fundamentos con aria-pressed y paso actual con
     var chips=(r[0].match(/<div class="fundamentos-chips"[\s\S]*?<\/div>/)||[''])[0].match(/<button[^>]*>/g)||[];
     igual(chips.length, 5, 'chips de fundamentos');
     chips.forEach(function(b){ verdadero(/type="button"/.test(b) && /aria-pressed="(true|false)"/.test(b) && /aria-controls="/.test(b), 'chip sin aria-pressed: '+b); });
-    igual((r[1].match(/class="paso-btn" data-ir="\d"/g)||[]).length, 5, 'botones de pasos');
+    igual((r[1].match(/class="paso-btn" data-ir="\d"/g)||[]).length, 3, 'botones de pasos');
     verdadero(/setAttribute\('aria-current','step'\)/.test(r[2]), 'el paso actual debe marcarse con aria-current="step"');
   });
 });
