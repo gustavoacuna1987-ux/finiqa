@@ -87,6 +87,13 @@ function render(){
   setVis('afcWrap', !!cz.afc && (R.ias+R.iasObra)>0);
   setVis('afcMontoWrap', S.afcMode==='monto');
   setVis('cmpWrap', S.comparar);
+  var hayMontos=SUELDO.some(function(k){ return !!S[k]; });
+  setVis('sueldoManual', manualAbierto || hayMontos); setVis('btnManual', !(manualAbierto || hayMontos));
+  var extras=EXTRAS.filter(function(k){ return !!S[k]; }).length;
+  $('extrasResumen').textContent = extras ? 'Ingresaste '+plural(extras,'monto','montos')+'.' : 'Comisiones, horas extra, bonos, reembolsos, anticipos o préstamos.';
+  if(extras && !extrasVisto){ $('extrasWrap').open=true; extrasVisto=true; }
+  var afcTxt = $('afcWrap').hidden ? '' : ' · Seguro de cesantía: '+(S.afcMode==='estimar' ? 'lo estimamos' : S.afcMode==='monto' ? money(parseMoney(S.afcMonto)) : 'no lo descuentan');
+  $('descResumen').textContent = (S.descMode==='manual' ? 'Descuentos ingresados a mano' : 'AFP '+AFP[S.afp][0])+afcTxt+'.';
   $('causalInfo').textContent = cz.info;
   Object.keys(PARAMS).forEach(function(k){
     var el=$(k), f=el.closest('.field'), err=f.querySelector('.err'), isBad=R.bad.indexOf(k)>=0, p=PARAMS[k];
@@ -163,7 +170,7 @@ function renderCmp(R){
   var P=$('resCmp'), C=Mo.comparar(R);
   if(!C){ P.hidden=true; $('cmpVacio').hidden=false; return; }
   $('cmpVacio').hidden=true;
-  if(C.estado==='vacia'){ P.hidden=false; P.innerHTML='<p class="hint">Ingresa los montos de la propuesta en el paso 5 para compararla.</p><button type="button" class="boton" data-ir="5">Ir al paso 5</button>'; return; }
+  if(C.estado==='vacia'){ P.hidden=false; P.innerHTML='<p class="hint">Ingresa los montos de la propuesta para compararla.</p><button type="button" class="boton" data-ir="4">Ingresar la propuesta</button>'; return; }
   var body=C.filas.map(function(r){
     return '<tr'+(r.cls==='d-bad'?' class="fila-dif"':'')+'><td>'+r.concepto+'</td><td>'+money(r.estimado)+'</td><td>'+money(r.ofrecido)+'</td><td class="'+r.cls+'">'+(r.igual?'≈ igual':(r.impacto>0?'+':'')+money(r.impacto))+'</td></tr>';
   }).join('');
@@ -174,7 +181,7 @@ function renderCmp(R){
 
 /* ---------- Boleta en vivo ---------- */
 // Montos del motor agrupados como en la boleta. Mientras no llegas al paso donde se ingresa un dato, se muestra "paso N".
-var BOLETA=[['ias','Años de servicio',2],['aviso','Aviso previo',2],['vac','Vacaciones',3],['rem','Último sueldo',4],['vol','Indemnización voluntaria',4,true],['desc','Descuentos',4]];
+var BOLETA=[['ias','Años de servicio',2],['aviso','Aviso previo',2],['vac','Vacaciones',3],['rem','Último sueldo',3],['vol','Indemnización voluntaria',3,true],['desc','Descuentos',3]];
 function renderBoleta(R){
   var h='';
   BOLETA.forEach(function(b){
@@ -184,17 +191,23 @@ function renderBoleta(R){
     h+='<li class="'+(m?'':'pendiente')+'"><span>'+b[1]+'</span><span class="puntos" aria-hidden="true"></span><span class="cifra">'+valor+'</span></li>';
   });
   $('bvLineas').innerHTML=h;
-  var completa=pasoMax>=5;
+  var completa=pasoMax>=N;
   $('bvEstado').textContent=completa?'Completa':'Parcial';
   $('bvTotalLbl').textContent=completa?'Total':'Subtotal';
   $('bvTotal').textContent=money(R.total);
   $('mbLbl').textContent=completa?'Total estimado':'Subtotal';
   $('mbTotal').textContent=money(R.total);
+  $('mobilebar').hidden=!R.total;
 }
 
 /* ---------- Paso a paso (solo presentación: todos los campos siguen en la página) ---------- */
-var PASOS=['Contrato','Sueldo','Vacaciones','Último mes','Compara'];
+// 3 pasos. La comparación con la propuesta del empleador no es un paso: se abre desde el resultado (sección data-paso="4").
+var PASOS=['Sueldo','Contrato','Vacaciones y último mes'], N=PASOS.length, COMPARA=N+1;
 var paso=1, pasoMax=1;
+// Campos del sueldo (se muestran al elegir "a mano" o cuando ya tienen datos) y pagos opcionales del último mes (plegados).
+var SUELDO=['sueldoBase','bonosFijos','gratMonto','var1','var2','var3','colacion','movilizacion'];
+var EXTRAS=['varMes','hhee','bonoPend','indemVoluntaria','otrosNoImp','descOtros'];
+var manualAbierto=false, extrasVisto=false;
 function mostrarVista(resultado){
   $('vistaPasos').hidden=resultado; $('vistaResultado').hidden=!resultado;
   $('antetitulo').textContent = resultado ? 'Resultado · Estimación referencial' : 'Calculadora de finiquito · Chile';
@@ -202,7 +215,8 @@ function mostrarVista(resultado){
   document.body.classList.toggle('en-resultado', resultado);
 }
 function irPaso(n, enfocar){
-  paso=Math.max(1, Math.min(5, n)); pasoMax=Math.max(pasoMax, paso);
+  paso=Math.max(1, Math.min(COMPARA, n)); if(paso<=N) pasoMax=Math.max(pasoMax, paso);
+  var cmp=paso===COMPARA;
   mostrarVista(false);
   document.querySelectorAll('#form .paso').forEach(function(s){ s.hidden = +s.dataset.paso!==paso; });
   document.querySelectorAll('#pasosLista .paso-btn').forEach(function(b){
@@ -210,23 +224,25 @@ function irPaso(n, enfocar){
     b.parentNode.className = i<paso ? 'hecho' : (i===paso ? 'actual' : 'pendiente');
     if(i===paso) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current');
     b.querySelector('.paso-circulo').innerHTML = i<paso ? ICONO_OK : String(i);
-    b.setAttribute('aria-label', 'Paso '+i+' de 5: '+PASOS[i-1]+(i<paso?' (listo)':''));
+    b.setAttribute('aria-label', 'Paso '+i+' de '+N+': '+PASOS[i-1]+(i<paso?' (listo)':''));
   });
-  $('pasoMovil').textContent='Paso '+paso+' de 5 · '+PASOS[paso-1];
-  $('btnVolver').hidden = paso===1;
-  $('btnSeguir').textContent = paso===5 ? 'Ver mi resultado' : 'Continuar';
+  $('pasosLista').hidden=cmp;
+  $('pasoMovil').textContent = cmp ? 'Opcional · Compara con lo que te ofrecen' : 'Paso '+paso+' de '+N+' · '+PASOS[paso-1];
+  $('btnVolver').hidden = paso===1 || cmp;
+  $('btnSeguir').textContent = cmp ? 'Ver la comparación' : paso===N ? 'Ver mi resultado' : 'Continuar';
   if(lastR) renderBoleta(lastR);
   if(enfocar){ var h=$('h'+paso+'paso'); h.focus({preventScroll:true}); $('pasosLista').scrollIntoView({block:'start'}); }
 }
 function verResultado(){
-  pasoMax=5; if(lastR) renderBoleta(lastR);
+  pasoMax=N; if(lastR) renderBoleta(lastR);
   mostrarVista(true);
   $('titulo').focus({preventScroll:true}); window.scrollTo(0, 0);
 }
-$('btnSeguir').addEventListener('click', function(){ if(paso<5) irPaso(paso+1, true); else verResultado(); });
+$('btnSeguir').addEventListener('click', function(){ if(paso<N) irPaso(paso+1, true); else verResultado(); });
 $('btnVolver').addEventListener('click', function(){ irPaso(paso-1, true); });
 $('btnEditar').addEventListener('click', function(){ irPaso(1, true); });
-$('btnIrComparar').addEventListener('click', function(){ irPaso(5, true); });
+$('btnIrComparar').addEventListener('click', function(){ irPaso(COMPARA, true); });
+$('btnManual').addEventListener('click', function(){ manualAbierto=true; render(); $('sueldoBase').focus(); });
 document.addEventListener('click', function(e){
   var b=e.target.closest && e.target.closest('[data-ir]');
   if(b) irPaso(+b.dataset.ir, b.closest('#resCmp')!=null);
@@ -278,14 +294,15 @@ function showToastNear(msg){ var t=$('toast'); t.textContent=msg; clearTimeout(t
 
 function applyExample(){
   isExample=true; editedExample=false; manual={uf:false,utm:false,imm:false};
-  setState(EJEMPLO); $('diasTrabajados').dataset.auto='0'; pasoMax=5;
+  setState(EJEMPLO); $('diasTrabajados').dataset.auto='0'; pasoMax=N; extrasVisto=false;
   $('bannerTxt').innerHTML='Estás viendo un <strong>ejemplo con datos ficticios</strong>. Cámbialos por los tuyos.';
   $('banner').hidden=false; render(); save();
 }
 function clearAll(){
   isExample=false; editedExample=false; manual={uf:false,utm:false,imm:false};
+  manualAbierto=false; extrasVisto=false;
   setState(DEFAULTS); $('banner').hidden=true; pasoMax=1; irPaso(1); render(); save();
-  var f=$('fechaIngreso'); if(f) f.focus();
+  $('h1paso').focus();
 }
 $('btnEjemplo').addEventListener('click', applyExample);
 $('btnLimpiar').addEventListener('click', clearAll);
@@ -486,8 +503,8 @@ function applyImport(){
   Object.keys(plan.radios).forEach(function(k){ setRadio(k, plan.radios[k]); });
   $('impReview').hidden=true; imp.files=[];
   render(); save();
-  setImpStatus('Listo: completamos tu sueldo con la liquidación. Revisa el paso 2 y completa en el paso 1 la causal y las fechas.'+plan.nota, 'good');
-  var h=$('h2paso'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'});
+  setImpStatus('Listo: completamos tu sueldo con la liquidación. Revisa los montos y continúa con cómo terminó tu contrato.'+plan.nota, 'good');
+  var h=$('h1paso'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'});
 }
 $('pdfInput').addEventListener('change', function(){ var fl=this.files; handleFiles(fl); this.value=''; });
 var dz=$('dropZone');
@@ -550,8 +567,8 @@ if(saved && saved.v){
   manual=Object.assign({uf:false,utm:false,imm:false}, saved.manual||{});
   if(isExample){ $('banner').hidden=false; if(editedExample) $('bannerTxt').innerHTML='Partiste desde el <strong>ejemplo</strong>. Revisa que todos los datos sean los tuyos.'; }
   // Si ya hay datos guardados, la boleta muestra todos los montos desde el comienzo.
-  if(saved.v.sueldoBase || saved.v.fechaIngreso) pasoMax=5;
+  if(saved.v.sueldoBase || saved.v.fechaIngreso) pasoMax=N;
   render();
-} else applyExample();
+} else { setState(DEFAULTS); render(); }
 irPaso(1);
 })();

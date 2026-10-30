@@ -53,6 +53,8 @@
 .grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
 .field{display:flex;flex-direction:column;gap:8px;min-width:0}
 .field.wide{grid-column:1/-1}
+/* En dos columnas, una etiqueta de dos líneas bajaba su casilla: cada campo usa 3 filas comunes (etiqueta, casilla, ayuda) para que las casillas de una misma fila queden alineadas */
+@media (min-width:600px){.paso .grid > .field:not(.wide){display:grid;grid-template-rows:subgrid;grid-row:span 3}}
 .label{font-weight:600;font-size:15px;line-height:1.35}
 .label .opt{font-weight:400}
 .hint{font-size:13px;color:var(--muted);line-height:1.5}
@@ -97,6 +99,21 @@ input::placeholder{color:var(--muted);opacity:.75}
 .note:empty{display:none}
 .sub{padding-top:24px;border-top:1.5px dashed var(--line2);display:grid;gap:16px}
 .sub h3{margin:0;font-size:18px;line-height:1.3;letter-spacing:-.01em}
+.sub-primero{padding-top:0;border-top:0}
+/* Paso 1: la liquidación es la acción principal; los montos a mano, la alternativa */
+.manual-btn{align-self:flex-start}
+.sueldo-manual{display:flex;flex-direction:column;gap:24px}
+@media (max-width:640px){.manual-btn{align-self:stretch}.drop{padding:18px}.drop .drop-icono{display:none}.drop .boton{flex:1 1 100%}}
+/* Paso 3: lo que no aplica a todos queda plegado, con un resumen de lo que se está usando */
+details.plegable{border:1.5px solid var(--line2);border-radius:14px;padding:0 16px}
+details.plegable > summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;padding:12px 0}
+details.plegable > summary::-webkit-details-marker{display:none}
+details.plegable > summary > span{display:flex;flex-direction:column;gap:2px;font-size:16px;font-weight:600}
+details.plegable > summary small{font-size:14px;font-weight:400;color:var(--muted)}
+details.plegable > summary::after{content:"Mostrar";flex:none;font-size:14px;font-weight:600;color:var(--brand)}
+details.plegable[open] > summary::after{content:"Ocultar"}
+details.plegable[open]{padding-bottom:16px}
+details.plegable > .grid,details.plegable > .sub{margin-top:8px}
 details.more > summary{cursor:pointer;color:var(--brand);font-size:14px;font-weight:600;list-style:none;min-height:32px;display:flex;align-items:center}
 details.more > summary::-webkit-details-marker{display:none}
 details.more > summary::before{content:"+";display:inline-block;width:16px}

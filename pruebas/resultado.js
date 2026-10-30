@@ -104,6 +104,8 @@ function aplicarCaso(win, caso){
 var CAMPOS_IMPORT=['sueldoBase','bonosFijos','gratMonto','colacion','movilizacion','var1','var2','var3','fechaIngreso','afp','tipo','vacSaldo','gratMode','vacMode'];
 var TIPOS_IMPORT={indefinido:'Indefinido',plazo:'Plazo fijo',obra:'Obra o faena'};
 var MSJ_LISTO='Listo: completamos tu sueldo con la liquidación. Revisa el paso 2 y completa en el paso 1 la causal y las fechas.';
+// La nueva pantalla empieza por la liquidación y cierra con otro texto; para compararla se cambia por el de la v8 (el resto del mensaje sale del lector).
+var MSJ_LISTO_NUEVA='Listo: completamos tu sueldo con la liquidación. Revisa los montos y continúa con cómo terminó tu contrato.';
 // archivos: [{name, data (Uint8Array)}] en el orden en que se suben. Lee igual que la pantalla.
 function importarConMotor(pdfjsLib, archivos){
   var files=[], lecturas={}, seq=0;
@@ -191,7 +193,7 @@ function importarEnPantalla(win, urls){
       var r=form.querySelector('input[name="'+k+'"]:checked');
       out.campos[k]= r ? r.value : $(k).value;
     });
-    out.nota=$('impStatus').innerHTML;
+    out.nota=$('impStatus').innerHTML.replace(MSJ_LISTO_NUEVA, MSJ_LISTO);
     return out;
   });
 }
