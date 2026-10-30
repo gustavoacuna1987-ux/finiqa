@@ -53,6 +53,8 @@
 .grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
 .field{display:flex;flex-direction:column;gap:8px;min-width:0}
 .field.wide{grid-column:1/-1}
+/* En dos columnas, una etiqueta de dos líneas bajaba su casilla: cada campo usa 3 filas comunes (etiqueta, casilla, ayuda) para que las casillas de una misma fila queden alineadas */
+@media (min-width:600px){.paso .grid > .field:not(.wide){display:grid;grid-template-rows:subgrid;grid-row:span 3}}
 .label{font-weight:600;font-size:15px;line-height:1.35}
 .label .opt{font-weight:400}
 .hint{font-size:13px;color:var(--muted);line-height:1.5}
