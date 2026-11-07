@@ -89,6 +89,12 @@ function render(){
   setVis('cmpWrap', S.comparar);
   var hayMontos=SUELDO.some(function(k){ return !!S[k]; });
   setVis('sueldoManual', manualAbierto || hayMontos); setVis('btnManual', !(manualAbierto || hayMontos));
+  // Resumen de lo opcional del sueldo (plegado en el paso 1)
+  var opc=[];
+  if(R.promVar>0) opc.push('Comisiones: '+money(R.promVar)+' promedio');
+  var colMov=parseMoney(S.colacion)+parseMoney(S.movilizacion);
+  if(colMov>0) opc.push('Colación y movilización: '+money(colMov));
+  $('sueldoOpcResumen').textContent = opc.length ? opc.join(' · ')+'.' : 'Si recibes comisiones o asignaciones, agrégalas aquí.';
   var extras=EXTRAS.filter(function(k){ return !!S[k]; }).length;
   $('extrasResumen').textContent = extras ? 'Ingresaste '+plural(extras,'monto','montos')+'.' : 'Comisiones, horas extra, bonos, reembolsos, anticipos o préstamos.';
   if(extras && !extrasVisto){ $('extrasWrap').open=true; extrasVisto=true; }
@@ -129,7 +135,9 @@ function render(){
     var st=items.reduce(function(a,b){return a+b.amount;},0), neg=g[0]==='desc';
     html+='<div class="grp"><div class="grp-h"><span>'+g[1]+(g[2]?' · '+g[2]:'')+'</span><span class="num'+(neg?' neg':'')+'">'+(neg?'−':'')+money(st)+'</span></div>';
     items.forEach(function(it){
-      html+='<details class="line"><summary><span class="l-texto"><span class="l-label">'+it.label+(it.tag?'<span class="tag">'+it.tag+'</span>':'')+(it.sub?'<small>'+it.sub+'</small>':'')+'</span><span class="ver" aria-hidden="true"></span></span><span class="leader"></span><span class="amount'+(neg?' neg':'')+'">'+(neg?'−':'')+money(it.amount)+'</span></summary><div class="how">'+it.how+'</div></details>';
+      // El descuento del seguro de cesantía asusta en rojo: se aclara ahí mismo que ese dinero se retira en la AFC (mismo texto del paso 3).
+      var nota = /seguro de cesantía/.test(it.label) && /^Aporte del empleador/.test(it.label) ? '<small class="l-nota">Ese dinero no se pierde: lo puedes retirar en la AFC.</small>' : '';
+      html+='<details class="line"><summary><span class="l-texto"><span class="l-label">'+it.label+(it.tag?'<span class="tag">'+it.tag+'</span>':'')+(it.sub?'<small>'+it.sub+'</small>':'')+nota+'</span><span class="ver" aria-hidden="true"></span></span><span class="leader"></span><span class="amount'+(neg?' neg':'')+'">'+(neg?'−':'')+money(it.amount)+'</span></summary><div class="how">'+it.how+'</div></details>';
     });
     html+='</div>';
   });
@@ -172,11 +180,11 @@ function renderCmp(R){
   $('cmpVacio').hidden=true;
   if(C.estado==='vacia'){ P.hidden=false; P.innerHTML='<p class="hint">Ingresa los montos de la propuesta para compararla.</p><button type="button" class="boton" data-ir="4">Ingresar la propuesta</button>'; return; }
   var body=C.filas.map(function(r){
-    return '<tr'+(r.cls==='d-bad'?' class="fila-dif"':'')+'><td>'+r.concepto+'</td><td>'+money(r.estimado)+'</td><td>'+money(r.ofrecido)+'</td><td class="'+r.cls+'">'+(r.igual?'≈ igual':(r.impacto>0?'+':'')+money(r.impacto))+'</td></tr>';
+    return '<tr'+(r.cls==='d-bad'?' class="fila-dif"':'')+'><td>'+r.concepto+'</td><td data-l="Referencia">'+money(r.estimado)+'</td><td data-l="Propuesta">'+money(r.ofrecido)+'</td><td data-l="Diferencia" class="'+r.cls+'">'+(r.igual?'≈ igual':(r.impacto>0?'+':'')+money(r.impacto))+'</td></tr>';
   }).join('');
   P.hidden=false;
   P.innerHTML='<div class="cmp-aviso cmp-'+C.estado+'">'+(C.estado==='menor'?ICONO_AVISO:ICONO_OK)+'<p>'+C.msg+'</p></div><div class="cmp-wrap"><table class="cmp"><thead><tr><th scope="col">Concepto</th><th scope="col">Referencia</th><th scope="col">Propuesta</th><th scope="col">Diferencia</th></tr></thead><tbody>'+body+
-    '</tbody><tfoot><tr><td>Total a recibir</td><td>'+money(R.total)+'</td><td>'+money(C.ofrTotal)+'</td><td class="'+C.clsTotal+'">'+(C.igualTotal?'≈ igual':(C.dT>0?'+':'')+money(C.dT))+'</td></tr></tfoot></table></div><p class="hint">Referencia es lo que estima Finiqa; propuesta, lo que te ofrecen. En descuentos, una diferencia en rojo significa que te descuentan más de lo estimado.</p>';
+    '</tbody><tfoot><tr><td>Total a recibir</td><td data-l="Referencia">'+money(R.total)+'</td><td data-l="Propuesta">'+money(C.ofrTotal)+'</td><td data-l="Diferencia" class="'+C.clsTotal+'">'+(C.igualTotal?'≈ igual':(C.dT>0?'+':'')+money(C.dT))+'</td></tr></tfoot></table></div><p class="hint">Referencia es lo que estima Finiqa; propuesta, lo que te ofrecen. En descuentos, una diferencia en rojo significa que te descuentan más de lo estimado.</p>';
 }
 
 /* ---------- Boleta en vivo ---------- */
@@ -230,8 +238,10 @@ function irPaso(n, enfocar){
   $('pasoMovil').textContent = cmp ? 'Opcional · Compara con lo que te ofrecen' : 'Paso '+paso+' de '+N+' · '+PASOS[paso-1];
   $('btnVolver').hidden = paso===1 || cmp;
   $('btnSeguir').textContent = cmp ? 'Ver la comparación' : paso===N ? 'Ver mi resultado' : 'Continuar';
+  // Bajo la boleta (celular): un camino de vuelta al paso o al resultado, para que la boleta no sea un callejón sin salida.
+  $('btnBoletaSeguir').textContent = cmp ? 'Volver a la propuesta' : paso===N ? 'Ver mi resultado' : 'Volver al paso '+paso;
   if(lastR) renderBoleta(lastR);
-  if(enfocar){ var h=$('h'+paso+'paso'); h.focus({preventScroll:true}); $('pasosLista').scrollIntoView({block:'start'}); }
+  if(enfocar){ var h=$('h'+paso+'paso'); h.focus({preventScroll:true}); (cmp ? h : $('pasosLista')).scrollIntoView({block:'start'}); }
 }
 function verResultado(){
   pasoMax=N; if(lastR) renderBoleta(lastR);
@@ -240,6 +250,7 @@ function verResultado(){
 }
 $('btnSeguir').addEventListener('click', function(){ if(paso<N) irPaso(paso+1, true); else verResultado(); });
 $('btnVolver').addEventListener('click', function(){ irPaso(paso-1, true); });
+$('btnBoletaSeguir').addEventListener('click', function(){ if(paso===N) verResultado(); else irPaso(paso, true); });
 $('btnEditar').addEventListener('click', function(){ irPaso(1, true); });
 $('btnIrComparar').addEventListener('click', function(){ irPaso(COMPARA, true); });
 $('btnManual').addEventListener('click', function(){ manualAbierto=true; render(); $('sueldoBase').focus(); });
