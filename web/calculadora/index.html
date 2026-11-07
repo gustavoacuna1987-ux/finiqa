@@ -129,12 +129,17 @@
                 <div class="affix has-pre"><span class="pre">$</span><input id="gratMonto" type="text" inputmode="numeric" data-t="money" placeholder="0"></div>
                 <p class="hint" id="gratHint">En la liquidación: “Gratificación legal”. <button type="button" id="btnGrat" class="enlace">Calcularla por mí</button></p>
               </div>
+            </div>
+            <!-- Lo opcional del sueldo queda plegado, con un resumen de lo ingresado (los campos siguen en la página) -->
+            <details class="plegable" id="sueldoOpc">
+              <summary><span><span>Comisiones, colación y movilización <span class="opt">(opcional)</span></span><small id="sueldoOpcResumen">Si recibes comisiones o asignaciones, agrégalas aquí.</small></span></summary>
+            <div class="grid">
               <div class="field wide">
                 <span class="label">Comisiones y bonos variables de los últimos 3 meses <span class="opt">(opcional)</span></span>
                 <div class="months3">
-                  <div class="affix has-pre"><span class="pre">$</span><input id="var1" type="text" inputmode="numeric" data-t="money" placeholder="Mes 1" aria-label="Variables mes 1"></div>
-                  <div class="affix has-pre"><span class="pre">$</span><input id="var2" type="text" inputmode="numeric" data-t="money" placeholder="Mes 2" aria-label="Variables mes 2"></div>
-                  <div class="affix has-pre"><span class="pre">$</span><input id="var3" type="text" inputmode="numeric" data-t="money" placeholder="Mes 3" aria-label="Variables mes 3"></div>
+                  <div class="affix has-pre" data-mes="Mes 1"><span class="pre">$</span><input id="var1" type="text" inputmode="numeric" data-t="money" placeholder="Mes 1" aria-label="Variables mes 1"></div>
+                  <div class="affix has-pre" data-mes="Mes 2"><span class="pre">$</span><input id="var2" type="text" inputmode="numeric" data-t="money" placeholder="Mes 2" aria-label="Variables mes 2"></div>
+                  <div class="affix has-pre" data-mes="Mes 3"><span class="pre">$</span><input id="var3" type="text" inputmode="numeric" data-t="money" placeholder="Mes 3" aria-label="Variables mes 3"></div>
                 </div>
                 <p class="hint">Comisiones, bonos de producción o metas y <strong>semana corrida</strong>. Si un mes no tuviste, déjalo vacío: se promedia entre 3. No incluyas horas extra.</p>
                 <p class="hint" id="promVarReadout"></p>
@@ -154,6 +159,7 @@
                 </div></details>
               </div>
             </div>
+            </details>
             <details class="more"><summary>¿Qué no se considera para las indemnizaciones?</summary><div>
               <p>Por ley (art. 172) se excluyen las horas extra, la asignación familiar y los bonos que se pagan de vez en cuando o una vez al año, como aguinaldos o bonos de vacaciones. Si tus comisiones varían, se usa el promedio de los últimos 3 meses.</p>
               <p>Para las indemnizaciones hay un tope: la base no puede superar 90 UF al mes.</p>
@@ -440,6 +446,7 @@
             <p class="boleta-nota">Estimación referencial. Se actualiza mientras avanzas.</p>
           </div>
         </div>
+        <button type="button" id="btnBoletaSeguir" class="boton primario grande boleta-seguir">Ver mi resultado</button>
         <p class="aviso-privado"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Tus datos no salen de tu dispositivo.</p>
       </aside>
     </div>
@@ -524,7 +531,7 @@
 
 <div class="mobilebar" id="mobilebar">
   <div><span class="lbl" id="mbLbl">Subtotal</span><strong id="mbTotal">$0</strong></div>
-  <a href="#boletaVivo" class="boton primario">Ver boleta</a>
+  <a href="#boletaVivo" class="boton primario">Ver detalle</a>
 </div>
 
 <footer class="pie">
