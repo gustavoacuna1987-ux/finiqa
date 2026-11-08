@@ -121,6 +121,45 @@ prueba('Ejemplo precargado', 'Resumen para copiar', function(){
   P.verdadero(t.indexOf('Cálculo referencial')>=0, 'el resumen debe traer el aviso de referencial');
 });
 
+/* ---------- Datos que parecen mal escritos: avisos que no estaban en la v8 (no cambian el cálculo) ---------- */
+function avisosDe(cambios){
+  var S=Object.assign({sueldoBase:'1.000.000', gratMode:'no', fechaIngreso:'2020-03-01', fechaTermino:'2026-10-31', diasTrabajados:'30', vacSaldo:'10'}, cambios);
+  return M.avisos(M.estimar(S, {hoy:C.HOY})).map(function(w){ return w[0]+': '+w[1]; }).join('\n');
+}
+function hay(texto, patron){ P.verdadero(patron.test(texto), 'falta el aviso '+patron+' en:\n'+texto); }
+function noHay(texto, patron){ P.verdadero(!patron.test(texto), 'sobra el aviso '+patron+' en:\n'+texto); }
+prueba('Datos raros', 'Datos normales no muestran avisos de datos raros', function(){
+  var t=avisosDe({});
+  noHay(t, /no existe en el calendario|año poco probable|monto completo|cero de más|mucho más de lo habitual|como máximo 31 días/);
+});
+prueba('Datos raros', 'Fecha con un año mal escrito o que no existe', function(){
+  hay(avisosDe({fechaTermino:'20266-10-31'}), /^bad: La fecha del último día de trabajo \(31-10-20266\) tiene un año poco probable/m);
+  hay(avisosDe({fechaIngreso:'1949-12-31'}), /^bad: La fecha de ingreso .*año poco probable/m);
+  noHay(avisosDe({fechaIngreso:'1980-05-05'}), /año poco probable/);
+  hay(avisosDe({fechaTermino:'2026-02-30'}), /^bad: La fecha del último día de trabajo \(30-02-2026\) no existe en el calendario/m);
+  var R=M.estimar({fechaIngreso:'2020-03-01', fechaTermino:'2026-02-30'}, {hoy:C.HOY});
+  igual(R.fechasRaras.map(function(x){ return x.k; }), ['fechaTermino']);
+});
+prueba('Datos raros', 'Sueldo base sin los miles o con un cero de más', function(){
+  hay(avisosDe({sueldoBase:'850'}), /^warn: El sueldo base es de solo \$850\. Escribe el monto completo/m);
+  hay(avisosDe({sueldoBase:'85.000.000'}), /^warn: El sueldo base de \$85\.000\.000 al mes es muy alto/m);
+  noHay(avisosDe({sueldoBase:'6.000.000'}), /cero de más/);
+});
+prueba('Datos raros', 'Vacaciones o días trabajados fuera de lo normal', function(){
+  hay(avisosDe({vacSaldo:'400'}), /^warn: Ingresaste 400 días hábiles de vacaciones pendientes: es mucho más de lo habitual/m);
+  noHay(avisosDe({vacSaldo:'60'}), /mucho más de lo habitual/);
+  hay(avisosDe({vacMode:'calc', vacPendientes:'90'}), /^warn: Tus vacaciones pendientes suman .* días hábiles/m);
+  hay(avisosDe({diasTrabajados:'45'}), /^warn: Ingresaste 45 días trabajados en el último mes/m);
+  noHay(avisosDe({diasTrabajados:'31'}), /como máximo 31 días/);
+  var R=M.estimar({sueldoBase:'850', vacSaldo:'400', fechaIngreso:'2020-03-01', fechaTermino:'2026-10-31', diasTrabajados:'45'}, {hoy:C.HOY});
+  igual(Object.keys(R.camposRaros).sort(), ['diasTrabajados','sueldoBase','vacSaldo'], 'cada aviso se muestra bajo su campo');
+});
+prueba('Datos raros', 'Los avisos no cambian el cálculo', function(){
+  var a=M.estimar({sueldoBase:'1.000.000', fechaIngreso:'2020-03-01', fechaTermino:'2026-10-31', diasTrabajados:'45'}, {hoy:C.HOY});
+  var b=M.estimar({sueldoBase:'1.000.000', fechaIngreso:'2020-03-01', fechaTermino:'2026-10-31', diasTrabajados:'30'}, {hoy:C.HOY});
+  igual(a.total, b.total);
+});
+
 /* ---------- Casos completos: el motor debe mostrar lo mismo que la v8 ---------- */
 C.calculo.forEach(function(caso){
   prueba(caso.grupo, caso.nombre, function(){

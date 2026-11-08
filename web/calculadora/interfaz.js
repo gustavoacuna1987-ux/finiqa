@@ -121,15 +121,30 @@ function render(){
     } else if(err) err.hidden=true;
   });
   if(R.bad.length) $('settings').open=true;
+  // Datos que parecen mal escritos (sueldo, vacaciones, días trabajados): aviso bajo el mismo campo.
+  ['sueldoBase','vacSaldo','vacPendientes','diasTrabajados'].forEach(function(k){
+    var el=$(k), txt=(R.camposRaros||{})[k], box=$(k+'Raro');
+    if(txt && !box){
+      box=document.createElement('p'); box.className='campo-raro'; box.id=k+'Raro'; box.setAttribute('role','status');
+      var af=el.closest('.affix')||el; af.parentNode.insertBefore(box, af.nextSibling);
+    }
+    if(box){ box.textContent=txt||''; box.hidden=!txt; }
+  });
 
   // Fechas vacías: pista en iPhone (ver calculadora.css)
   ['fechaIngreso','fechaTermino','fechaPago'].forEach(function(k){ $(k).classList.toggle('fecha-vacia', !$(k).value); });
   // lecturas
-  // Fechas al revés: se avisa aquí mismo (el motor también lo deja en los avisos del resultado).
-  var fechasMal = !R.ant && !!parseDate(S.fechaIngreso) && !!parseDate(S.fechaTermino);
-  ['fechaIngreso','fechaTermino'].forEach(function(k){ $(k).setAttribute('aria-invalid', fechasMal?'true':'false'); });
-  $('antReadout').classList.toggle('readout-error', fechasMal);
-  if(fechasMal){
+  // Fechas mal escritas o al revés: se avisa aquí mismo (el motor también lo deja en los avisos del resultado).
+  var raras=R.fechasRaras||[];
+  var fechasMal = !raras.length && !R.ant && !!parseDate(S.fechaIngreso) && !!parseDate(S.fechaTermino);
+  ['fechaIngreso','fechaTermino'].forEach(function(k){
+    var mal = fechasMal || raras.some(function(x){ return x.k===k; });
+    $(k).setAttribute('aria-invalid', mal?'true':'false');
+  });
+  $('antReadout').classList.toggle('readout-error', fechasMal || raras.length>0);
+  if(raras.length){
+    $('antReadout').innerHTML=raras.map(function(x){ return x.txt; }).join(' ');
+  } else if(fechasMal){
     $('antReadout').innerHTML='El último día de trabajo ('+fecha(parseDate(S.fechaTermino))+') es anterior a la fecha de ingreso ('+fecha(parseDate(S.fechaIngreso))+'). Revisa las fechas: sin ellas no se pueden calcular los años de servicio ni las vacaciones.';
   } else if(R.ant){
     var t='Antigüedad: <b>'+antTxt(R.ant)+'</b>.';
