@@ -9,6 +9,16 @@ var nf0=Mo.nf0, money=Mo.money, num=Mo.num, plural=Mo.plural;
 var DEFAULTS=Mo.DEFAULTS, EJEMPLO=Mo.EJEMPLO, PARAMS=Mo.PARAMS, IND=Mo.IND, AFP=Mo.AFP;
 var parseMoney=Mo.parseMoney, parseSmart=Mo.parseSmart, parseDec=Mo.parseDec, parseDate=Mo.parseDate, fecha=Mo.fecha, antTxt=Mo.antTxt;
 
+/* ---------- Textos del motor que nombran un paso ---------- */
+// El motor conserva los textos de la v8, que tenía otro orden de pasos. Aquí se ajustan a esta pantalla
+// (la comparación en vivo de pruebas/resultado.js los vuelve a la versión de la v8 antes de comparar).
+var TEXTOS_PASOS=[
+  ['Falta el sueldo base (paso 2).', 'Falta el sueldo base (paso 1).'],
+  ['ingrésalo en el paso 4.', 'ingrésalo en el paso 3, en «¿Te deben algo más o te descuentan algo?».'],
+  ['anótalo en el paso 4.', 'anótalo en el paso 3, en «¿Te deben algo más o te descuentan algo?».']
+];
+function textoPantalla(t){ TEXTOS_PASOS.forEach(function(x){ t=t.split(x[0]).join(x[1]); }); return t; }
+
 /* ---------- Valores legales automáticos ---------- */
 var manual = {uf:false, utm:false, imm:false};
 var AUTO = {};
@@ -96,11 +106,11 @@ function render(){
   if(colMov>0) opc.push('Colación y movilización: '+money(colMov));
   $('sueldoOpcResumen').textContent = opc.length ? opc.join(' · ')+'.' : 'Si recibes comisiones o asignaciones, agrégalas aquí.';
   var extras=EXTRAS.filter(function(k){ return !!S[k]; }).length;
-  $('extrasResumen').textContent = extras ? 'Ingresaste '+plural(extras,'monto','montos')+'.' : 'Comisiones, horas extra, bonos, reembolsos, anticipos o préstamos.';
+  $('extrasResumen').textContent = extras ? 'Ingresaste '+plural(extras,'monto','montos')+'.' : 'Comisiones, horas extra, bonos, indemnización voluntaria, reembolsos, anticipos o préstamos.';
   if(extras && !extrasVisto){ $('extrasWrap').open=true; extrasVisto=true; }
   var afcTxt = $('afcWrap').hidden ? '' : ' · Seguro de cesantía: '+(S.afcMode==='estimar' ? 'lo estimamos' : S.afcMode==='monto' ? money(parseMoney(S.afcMonto)) : 'no lo descuentan');
   $('descResumen').textContent = (S.descMode==='manual' ? 'Descuentos ingresados a mano' : 'AFP '+AFP[S.afp][0])+afcTxt+'.';
-  $('causalInfo').textContent = cz.info;
+  $('causalInfo').textContent = textoPantalla(cz.info);
   Object.keys(PARAMS).forEach(function(k){
     var el=$(k), f=el.closest('.field'), err=f.querySelector('.err'), isBad=R.bad.indexOf(k)>=0, p=PARAMS[k];
     el.setAttribute('aria-invalid', isBad?'true':'false');
@@ -112,15 +122,23 @@ function render(){
   });
   if(R.bad.length) $('settings').open=true;
 
+  // Fechas vacías: pista en iPhone (ver calculadora.css)
+  ['fechaIngreso','fechaTermino','fechaPago'].forEach(function(k){ $(k).classList.toggle('fecha-vacia', !$(k).value); });
   // lecturas
-  if(R.ant){
+  // Fechas al revés: se avisa aquí mismo (el motor también lo deja en los avisos del resultado).
+  var fechasMal = !R.ant && !!parseDate(S.fechaIngreso) && !!parseDate(S.fechaTermino);
+  ['fechaIngreso','fechaTermino'].forEach(function(k){ $(k).setAttribute('aria-invalid', fechasMal?'true':'false'); });
+  $('antReadout').classList.toggle('readout-error', fechasMal);
+  if(fechasMal){
+    $('antReadout').innerHTML='El último día de trabajo ('+fecha(parseDate(S.fechaTermino))+') es anterior a la fecha de ingreso ('+fecha(parseDate(S.fechaIngreso))+'). Revisa las fechas: sin ellas no se pueden calcular los años de servicio ni las vacaciones.';
+  } else if(R.ant){
     var t='Antigüedad: <b>'+antTxt(R.ant)+'</b>.';
     if(cz.ias && !R.casa){
       t += R.ant.y>=1 ? ' Para la indemnización se cuentan <b>'+plural(R.aniosInd,'año','años')+'</b>' + ((R.ant.m||R.ant.d)?(R.fracCuenta?' (la fracción supera 6 meses y suma un año).':' (la fracción no supera 6 meses).'):'.') : ' Menos de un año: no hay indemnización por años de servicio.';
     }
     $('antReadout').innerHTML=t;
   } else $('antReadout').innerHTML='';
-  $('vacReadout').innerHTML = S.vacMode==='calc' ? (R.vacTxt || 'Ingresa las fechas del paso 1 para calcular tus días proporcionales.') : '';
+  $('vacReadout').innerHTML = S.vacMode==='calc' ? (R.vacTxt || 'Ingresa las fechas del paso 2 para calcular tus días proporcionales.') : '';
   $('promVarReadout').innerHTML = R.promVar>0 ? 'Promedio mensual: <strong class="num">'+money(R.promVar)+'</strong>' : '';
   $('gratHint').firstChild.textContent = 'En la liquidación: “Gratificación legal”. Tope mensual: '+money(R.topeGrat)+'. ';
 
@@ -161,7 +179,7 @@ function render(){
   // avisos
   var W=Mo.avisos(R);
   var labels={info:'Dato',warn:'Atención',bad:'Error'};
-  $('resAvisos').innerHTML = W.length ? W.map(function(w){ return '<li class="'+w[0]+'"><span class="pill">'+labels[w[0]]+'</span><span>'+w[1]+'</span></li>'; }).join('') : '<li><span class="pill">Ok</span><span>No vemos nada inusual con los datos ingresados.</span></li>';
+  $('resAvisos').innerHTML = W.length ? W.map(function(w){ return '<li class="'+w[0]+'"><span class="pill">'+labels[w[0]]+'</span><span>'+textoPantalla(w[1])+'</span></li>'; }).join('') : '<li><span class="pill">Ok</span><span>No vemos nada inusual con los datos ingresados.</span></li>';
 
   lastR=R;
   renderInforme(R);
@@ -454,6 +472,9 @@ function finishImport(){
   if(imp.files.length){
     renderReview();
     setImpStatus('Revisa antes de aplicar: corrige lo que haga falta y presiona <strong>Aplicar montos</strong>.'+errs, imp.errors.length?'warn':'');
+    // En el celular el cuadro para revisar queda bajo la pantalla: se baja hasta él para que se vea.
+    var s=$('impStatus'), r=s.getBoundingClientRect();
+    if(s.scrollIntoView && r.top>window.innerHeight*0.6) s.scrollIntoView({block:'start'});
   } else {
     setImpStatus((errs?errs.slice(4):'No se pudo leer ningún archivo.'), 'bad');
   }

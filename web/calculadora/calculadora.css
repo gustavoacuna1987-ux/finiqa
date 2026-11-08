@@ -83,6 +83,10 @@ select{padding-right:36px}
    Sin la apariencia nativa respetan el ancho; en Chrome y Firefox se ven igual (siguen con su ícono de calendario). */
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+/* iPhone y iPad: una fecha vacía se ve como una caja en blanco; se muestra una pista (en el computador ya aparece dd-mm-aaaa). */
+@supports (-webkit-touch-callout:none){
+  input[type=date].fecha-vacia::before{content:'Toca para elegir la fecha';color:var(--muted)}
+}
 textarea{min-height:72px;resize:vertical;font-size:15px}
 input:focus,select:focus,textarea:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px color-mix(in srgb, var(--brand) 28%, transparent)}
 input[aria-invalid="true"]{border-color:var(--bad)}
@@ -121,6 +125,7 @@ input::placeholder{color:var(--muted);opacity:.75}
 .readout:empty{display:none}
 .readout.field,.note.field{display:block}
 .readout.field:empty,.note.field:empty{display:none}
+.readout.readout-error{background:var(--badSoft);color:var(--bad);font-weight:500}
 .note{background:var(--bg);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.55}
 .note:empty{display:none}
 .sub{padding-top:24px;border-top:1.5px dashed var(--line2);display:grid;gap:16px}
