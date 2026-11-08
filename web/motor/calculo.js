@@ -260,6 +260,15 @@ function calcular(S, AUTO){
     if(ft<fi) W.push(['bad','La fecha de término es anterior a la de ingreso. Revisa las fechas.']);
     else ant=diff(fi, ft+DAY);
   } else W.push(['warn','Ingresa la fecha de ingreso y el último día de trabajo para calcular antigüedad, indemnizaciones y vacaciones.']);
+  // Datos que parecen mal escritos (no están en la v8): solo se avisa, el cálculo no cambia.
+  var fechasRaras=[];
+  [['fechaIngreso','de ingreso'], ['fechaTermino','del último día de trabajo']].forEach(function(f){
+    var s=S[f[0]], t=parseDate(s); if(!t) return;
+    var y=ymdParts(t)[0];
+    if(iso(t)!==s) fechasRaras.push({k:f[0], txt:'La fecha '+f[1]+' ('+s.split('-').reverse().join('-')+') no existe en el calendario. Revísala.'});
+    else if(y<1950 || y>2100) fechasRaras.push({k:f[0], txt:'La fecha '+f[1]+' ('+fecha(t)+') tiene un año poco probable. Revisa que esté bien escrita.'});
+  });
+  fechasRaras.forEach(function(x){ W.push(['bad', x.txt]); });
 
   var casa = S.tipo==='casa';
   var preLey = fi && fi < Date.UTC(1981,7,14);
@@ -287,6 +296,11 @@ function calcular(S, AUTO){
   if(grat>topeGrat*1.01 && imm>0) W.push(['info','Tu gratificación supera el tope legal mensual ('+money(topeGrat)+'). Puede ser una gratificación pactada; déjala si así aparece en tu liquidación.']);
   if(conTope) W.push(['info','Tu remuneración supera el tope de 90 UF ('+money(tope90)+'). Las indemnizaciones se calculan con ese tope.']);
   if(!sueldo) W.push(['warn','Falta el sueldo base (paso 2).']);
+  // camposRaros: aviso por campo, para mostrarlo también bajo ese campo en la pantalla.
+  var camposRaros={};
+  if(sueldo>0 && sueldo<10000) camposRaros.sueldoBase='El sueldo base es de solo '+money(sueldo)+'. Escribe el monto completo en pesos, como aparece en tu liquidación (por ejemplo, 850.000 y no 850).';
+  if(sueldo>50000000) camposRaros.sueldoBase='El sueldo base de '+money(sueldo)+' al mes es muy alto. Revisa que no tenga un cero de más.';
+  if(camposRaros.sueldoBase) W.push(['warn', camposRaros.sueldoBase]);
 
   // Indemnización por años de servicio
   var ias=0, iasObra=0, aviso=0, recargo=0, vol=0;
@@ -360,12 +374,21 @@ function calcular(S, AUTO){
       L.push({g:'vac', k:'vac', label:'Vacaciones pendientes', sub:num(vacDias)+' días (sin convertir)', amount:vac, how:'Falta la fecha de término para convertir a días corridos.'});
     }
   }
+  if(vacDias>60){
+    var vacK = S.vacMode==='saldo' ? 'vacSaldo' : 'vacPendientes';
+    camposRaros[vacK]=(S.vacMode==='saldo'?'Ingresaste ':'Tus vacaciones pendientes suman ')+num(vacDias)+' días hábiles de vacaciones pendientes: es mucho más de lo habitual (normalmente se acumulan como máximo dos períodos, unos 30 días hábiles). Revisa el saldo en tu última liquidación o pide el certificado de vacaciones.';
+    W.push(['warn', camposRaros[vacK]]);
+  }
   if(S.vacMode==='saldo' && !vacDias && ant) W.push(['info','No ingresaste vacaciones pendientes. Casi siempre hay días proporcionales: si no conoces tu saldo, elige “Calcularlo con mis fechas”.']);
 
   // Sueldo pendiente
   var imponible=0;
   if(S.incluyeUltimoMes){
     var dias=Math.min(30, D('diasTrabajados'));
+    if(D('diasTrabajados')>31){
+      camposRaros.diasTrabajados='Ingresaste '+num(D('diasTrabajados'))+' días trabajados en el último mes. Un mes tiene como máximo 31 días, así que se consideran 30. Revisa el número.';
+      W.push(['warn', camposRaros.diasTrabajados]);
+    }
     if(dias>0){
       var remDias=(sueldo+fijos)/30*dias;
       if(remDias>0) L.push({g:'rem', k:'rem', label:'Sueldo de los días trabajados', sub:plural(dias,'día','días')+' del último mes', tag:'Imponible', amount:remDias,
@@ -445,7 +468,7 @@ function calcular(S, AUTO){
   }
 
   return {S:S, bad:bad, uf:uf, utm:utm, L:L, W:W, ant:ant, aniosInd:aniosInd, fracCuenta:fracCuenta, cz:cz, total:total, tInd:tInd, tVac:tVac, tRem:tRem, tDesc:tDesc,
-    vacTxt:vacTxt, vacDias:vacDias, conv:conv, promVar:promVar, topeGrat:topeGrat, sueldo:sueldo, fijos:fijos, juicio:juicio, sumK:sumK, ias:ias, iasObra:iasObra, casa:casa};
+    vacTxt:vacTxt, vacDias:vacDias, fechasRaras:fechasRaras, camposRaros:camposRaros, conv:conv, promVar:promVar, topeGrat:topeGrat, sueldo:sueldo, fijos:fijos, juicio:juicio, sumK:sumK, ias:ias, iasObra:iasObra, casa:casa};
 }
 
 // Atajo: calcula como la pantalla, con UF, UTM e ingreso mínimo automáticos salvo los indicados en `manual`.

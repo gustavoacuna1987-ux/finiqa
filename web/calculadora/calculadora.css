@@ -126,6 +126,7 @@ input::placeholder{color:var(--muted);opacity:.75}
 .readout.field,.note.field{display:block}
 .readout.field:empty,.note.field:empty{display:none}
 .readout.readout-error{background:var(--badSoft);color:var(--bad);font-weight:500}
+.campo-raro{background:var(--warn);color:var(--warnText);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:14px;line-height:1.45}
 .note{background:var(--bg);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.55}
 .note:empty{display:none}
 .sub{padding-top:24px;border-top:1.5px dashed var(--line2);display:grid;gap:16px}
