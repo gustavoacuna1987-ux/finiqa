@@ -50,6 +50,20 @@ prueba('UF y UTM al día', 'El programa diario no guarda datos raros (respaldo)'
   r=I.combinar({uf:{'2026-09':41057.2}, utm:{'2026-10':72151}, ufUltima:['2026-10-09', 41100]}, [{fecha:'2026-10-31', valor:47000}], []);
   verdadero(I.validar(r).some(function(p){ return /salto/.test(p); }), 'debía detectar un salto de más de 5 %');
 });
+prueba('UF y UTM al día', 'El programa diario pide solo los años que hacen falta', function(){
+  igual(I.aniosNecesarios('2026-11-08'), [2026]);
+  igual(I.aniosNecesarios('2027-01-03'), [2026, 2027]);
+  igual(I.aniosNecesarios('2027-02-28'), [2026, 2027]);
+  igual(I.aniosNecesarios('2026-12-20'), [2026, 2027]);
+});
+prueba('UF y UTM al día', 'Se avisa si la UF o la UTM guardadas quedaron viejas', function(){
+  var d={uf:{}, utm:{'2026-11':72440}, ufUltima:['2026-11-09', 41295.46]};
+  igual(I.vencido(d, '2026-11-08'), []);
+  igual(I.vencido(d, '2026-11-09'), []);
+  igual(I.vencido(d, '2026-11-10').length, 1, 'el día 10 ya debía estar la UF nueva');
+  igual(I.vencido(d, '2026-12-01').length, 2, 'en diciembre falta la UF y la UTM');
+  igual(I.vencido(null, '2026-11-08').length, 2);
+});
 prueba('UF y UTM al día', 'El archivo publicado es válido y coincide con la tabla incluida', function(){
   return root.FiniqaEntorno.leerTexto('web/datos/indicadores.json').then(function(t){
     verdadero(t!=null, 'falta web/datos/indicadores.json');

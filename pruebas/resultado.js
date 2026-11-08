@@ -57,6 +57,14 @@ function calcularCaso(caso, hoy){
   var R=Mo.estimar(caso.estado, {manual:caso.manual, hoy:hoy});
   return desdeMotor(R, caso.manual);
 }
+// La nueva pantalla ajusta los avisos que nombran un paso (TEXTOS_PASOS en web/calculadora/interfaz.js);
+// para comparar se vuelven a escribir como en la v8. Si cambian allá, cambiarlos aquí también.
+var TEXTOS_PASOS_NUEVA=[
+  ['Falta el sueldo base (paso 2).', 'Falta el sueldo base (paso 1).'],
+  ['ingrésalo en el paso 4.', 'ingrésalo en el paso 3, en «¿Te deben algo más o te descuentan algo?».'],
+  ['anótalo en el paso 4.', 'anótalo en el paso 3, en «¿Te deben algo más o te descuentan algo?».']
+];
+function comoV8(t){ TEXTOS_PASOS_NUEVA.forEach(function(x){ t=t.split(x[1]).join(x[0]); }); return t; }
 // Lee el resultado tal como lo muestra la pantalla (v8 original o la nueva interfaz).
 function desdePantalla(doc){
   var $=function(id){ return doc.getElementById(id); };
@@ -69,7 +77,7 @@ function desdePantalla(doc){
       })};
   });
   var avisos=Array.prototype.filter.call(doc.querySelectorAll('#resAvisos li'), function(li){ return li.className; })
-    .map(function(li){ return [li.className, li.children[1].innerHTML]; });
+    .map(function(li){ return [li.className, comoV8(li.children[1].innerHTML)]; });
   var J=$('resJuicio'), juicio=J.hidden ? null : {extra:txt(J.querySelector('.big')), txt:J.querySelectorAll('p')[1].innerHTML};
   var P=$('resCmp'), cmp=null;
   if(!P.hidden){

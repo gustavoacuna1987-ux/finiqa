@@ -4,11 +4,13 @@
  * - UTM: valor de cada mes.
  * Si mindicador.cl no responde o algún valor se ve raro, no cambia nada y termina con error:
  * la calculadora sigue usando los valores que ya tenía y, como respaldo, la tabla incluida en el motor.
+ * Con --revisar no consulta internet: solo revisa que los valores guardados estén al día
+ * (lo corre GitHub Actions al final, para que la corrida quede en rojo y avise por correo si quedaron viejos).
  * Funciona en Node (y sus funciones de cálculo también en el navegador, para las pruebas). */
 (function(root, factory){
   if(typeof module==='object' && module.exports){
     module.exports = factory(require('../web/motor/calculo.js'));
-    if(require.main===module) module.exports.main();
+    if(require.main===module){ if(process.argv.indexOf('--revisar')>=0) module.exports.revisar(); else module.exports.main(); }
   } else root.FiniqaIndicadores = factory(root.FiniqaMotor);
 })(typeof self!=='undefined' ? self : this, function(Motor){
 'use strict';
@@ -60,6 +62,23 @@ function mismosDatos(a, b){
 function texto(d){
   return JSON.stringify({fuente:d.fuente, actualizado:d.actualizado, uf:ordenar(d.uf), utm:ordenar(d.utm), ufUltima:d.ufUltima}, null, 2)+'\n';
 }
+// Años que hay que pedir a mindicador.cl: el actual; en enero y febrero también el anterior (por si faltó
+// el cierre de diciembre) y en diciembre también el siguiente (la UF del 1 al 9 de enero y la UTM de enero se publican antes).
+// Menos consultas = menos posibilidades de que falle alguna.
+function aniosNecesarios(hoy){ // hoy: "aaaa-mm-dd"
+  var y=+hoy.slice(0,4), m=+hoy.slice(5,7), r=[y];
+  if(m<=2) r.unshift(y-1);
+  if(m===12) r.push(y+1);
+  return r;
+}
+// Lista de problemas si los valores guardados quedaron viejos (vacía si están al día).
+// La UF siempre se conoce por adelantado (cada día 9 se publica hasta el 9 del mes siguiente) y la UTM del mes en curso también.
+function vencido(d, hoy){
+  var out=[], mes=hoy.slice(0,7);
+  if(!d || !Array.isArray(d.ufUltima) || d.ufUltima[0]<hoy) out.push('La UF guardada llega solo hasta '+(d && d.ufUltima ? d.ufUltima[0] : '(nada)')+' y hoy es '+hoy+'.');
+  if(!d || !d.utm || d.utm[mes]==null) out.push('Falta la UTM de '+mes+'.');
+  return out;
+}
 // Fecha de hoy en Chile, "aaaa-mm-dd".
 function hoyChile(){ return new Intl.DateTimeFormat('en-CA', {timeZone:'America/Santiago'}).format(new Date()); }
 
@@ -71,7 +90,7 @@ function main(){
     intento=intento||1;
     return fetch(url, {headers:{'User-Agent':'Finiqa (github.com/gustavoacuna1987-ux/finiqa)'}, signal:AbortSignal.timeout(20000)})
       .then(function(r){ if(!r.ok) throw new Error(url+' respondió '+r.status); return r.json(); })
-      .catch(function(e){ if(intento>=3) throw e; return espera(5000*intento).then(function(){ return pedir(url, intento+1); }); });
+      .catch(function(e){ if(intento>=4) throw e; return espera(10000*intento).then(function(){ return pedir(url, intento+1); }); });
   }
   function serie(tipo, anio){
     return pedir('https://mindicador.cl/api/'+tipo+'/'+anio).then(function(j){
@@ -82,7 +101,7 @@ function main(){
   var anterior;
   try{ anterior=JSON.parse(fs.readFileSync(ARCHIVO, 'utf8')); }
   catch(e){ anterior={uf:Motor.IND.uf, utm:Motor.IND.utm, ufUltima:Motor.IND.ufUltima, actualizado:null}; }
-  var y=+hoyChile().slice(0,4), anios=[y-1, y, y+1], uf=[], utm=[];
+  var anios=aniosNecesarios(hoyChile()), uf=[], utm=[];
   return anios.reduce(function(p, a){
     return p.then(function(){ return Promise.all([serie('uf', a), serie('utm', a)]); }).then(function(r){ uf=uf.concat(r[0]); utm=utm.concat(r[1]); });
   }, Promise.resolve()).then(function(){
@@ -104,5 +123,18 @@ function main(){
   });
 }
 
-return {combinar:combinar, validar:validar, mismosDatos:mismosDatos, texto:texto, ultimoDiaDelMes:ultimoDiaDelMes, main:main};
+function revisar(){
+  var fs=require('fs'), path=require('path'), d=null;
+  try{ d=JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'web', 'datos', 'indicadores.json'), 'utf8')); }catch(e){}
+  var prob=vencido(d, hoyChile());
+  if(prob.length){
+    console.error('La UF o la UTM quedaron viejas: la actualización diaria no ha podido leer mindicador.cl.\n  - '+prob.join('\n  - ')+
+      '\nLa calculadora sigue funcionando: le pide el valor faltante a mindicador.cl desde el navegador de quien la usa.'+
+      '\nPara reintentar: pestaña Actions > Publicar > Run workflow.');
+    process.exitCode=1;
+  } else console.log('UF y UTM al día: UF hasta '+d.ufUltima[0]+', UTM de '+hoyChile().slice(0,7)+' = '+d.utm[hoyChile().slice(0,7)]+'.');
+}
+
+return {combinar:combinar, validar:validar, mismosDatos:mismosDatos, texto:texto, ultimoDiaDelMes:ultimoDiaDelMes,
+  aniosNecesarios:aniosNecesarios, vencido:vencido, main:main, revisar:revisar};
 });

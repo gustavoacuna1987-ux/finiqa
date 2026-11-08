@@ -3,6 +3,9 @@
 # - Todos los días (y a mano desde la pestaña Actions): primero actualiza la UF y la UTM desde
 #   mindicador.cl; si hay valores nuevos los guarda en el repositorio, corre las pruebas y publica.
 #   Si mindicador.cl falla, se publica igual con los valores que ya había (respaldo: la tabla del motor).
+#   Corre dos veces al día: mindicador.cl falla a menudo y así hay un segundo intento.
+# - Al final revisa que la UF y la UTM guardadas estén al día: si quedaron viejas, la corrida queda en rojo
+#   (GitHub avisa por correo), aunque el sitio ya se haya publicado.
 name: Publicar
 
 on:
@@ -10,6 +13,7 @@ on:
     branches: [main]
   schedule:
     - cron: "15 11 * * *" # todos los días, 08:15 en Chile (verano) / 07:15 (invierno)
+    - cron: "15 19 * * *" # segundo intento: 16:15 en Chile (verano) / 15:15 (invierno). GitHub suele atrasarlos unas horas.
   workflow_dispatch:
 
 permissions:
@@ -67,3 +71,6 @@ jobs:
       - name: Publicar en GitHub Pages
         id: despliegue
         uses: actions/deploy-pages@v4
+
+      - name: Revisar que la UF y la UTM estén al día
+        run: node herramientas/actualizar-indicadores.js --revisar
