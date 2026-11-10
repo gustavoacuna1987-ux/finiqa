@@ -15,6 +15,7 @@ globalThis.FiniqaInforme = require('../web/calculadora/informe.js');
 globalThis.Pruebas = require('./marco.js');
 globalThis.FiniqaCasos = require('./casos.js');
 globalThis.FiniqaEsperados = require('./esperados.js');
+globalThis.FiniqaCorrecciones = require('./correcciones.js');
 globalThis.FiniqaResultado = require('./resultado.js');
 globalThis.FiniqaIndicadores = require('../herramientas/actualizar-indicadores.js');
 globalThis.FiniqaEntorno = {

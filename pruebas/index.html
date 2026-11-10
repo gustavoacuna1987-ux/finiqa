@@ -38,7 +38,7 @@ iframe.v8{width:1px;height:1px;border:0;position:absolute;left:-9999px}
 <body>
 <div class="wrap">
   <h1>Pruebas de Finiqa</h1>
-  <p class="muted">Revisan que el motor de cálculo y el lector de liquidaciones den exactamente los mismos resultados que la versión original (v8). Se corren solas al abrir esta página; también corren en GitHub cada vez que se sube un cambio.</p>
+  <p class="muted">Revisan que el motor de cálculo y el lector de liquidaciones den exactamente los mismos resultados que la versión original (v8), salvo las correcciones legales anotadas en <code>correcciones.js</code>. Se corren solas al abrir esta página; también corren en GitHub cada vez que se sube un cambio.</p>
   <p class="muted" id="avisoArchivo" hidden>Abriste esta página directamente como archivo: las pruebas de PDFs y la comparación en vivo necesitan abrirla desde un servidor (por ejemplo, la versión publicada).</p>
 
   <div id="resumen" class="resumen">Corriendo pruebas…</div>
@@ -62,7 +62,7 @@ iframe.v8{width:1px;height:1px;border:0;position:absolute;left:-9999px}
 (function(){
   var v='?t='+Date.now();
   var lista=['../web/vendor/pdfjs/pdf.min.js','../web/vendor/pdfjs/pdf.worker.min.js',
-    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'../web/motor/ocr.js'+v,'../web/calculadora/lector-imagen.js'+v,'../web/calculadora/informe.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'resultado.js'+v,'../herramientas/actualizar-indicadores.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-ocr.js'+v,'pruebas-app.js'+v,'pruebas-indicadores.js'+v];
+    '../web/motor/calculo.js'+v,'../web/motor/lector.js'+v,'../web/motor/ocr.js'+v,'../web/calculadora/lector-imagen.js'+v,'../web/calculadora/informe.js'+v,'marco.js'+v,'casos.js'+v,'esperados.js'+v,'correcciones.js'+v,'resultado.js'+v,'../herramientas/actualizar-indicadores.js'+v,'pruebas-motor.js'+v,'pruebas-lector.js'+v,'pruebas-ocr.js'+v,'pruebas-app.js'+v,'pruebas-indicadores.js'+v];
   function sig(i){
     if(i>=lista.length){ window.iniciarPruebas(); return; }
     var s=document.createElement('script'); s.src=lista[i];
@@ -170,6 +170,7 @@ function comparar(url, titulo){
   return capturar(url, function(t){ V.innerHTML='<p class="muted">'+esc(t)+'…</p>'; }).then(function(pant){
     var res=C.calculo.map(function(caso){
       var d=Res.diferencias(pant.calculo[caso.id], Res.calcularCaso(caso, C.HOY));
+      if(/calculadora_v8/.test(url)) d=Res.sinCorrecciones(caso.id, d, window.FiniqaCorrecciones); // la v8 no tiene las correcciones legales
       return {grupo:caso.grupo, nombre:caso.nombre, ok:!d.length, error:d.length?d.length+' diferencia(s)':'', detalle:d};
     });
     return C.pdfs.reduce(function(p, caso){

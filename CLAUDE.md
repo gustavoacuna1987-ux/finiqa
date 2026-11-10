@@ -11,7 +11,7 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 ## Reglas del producto
 - No cambiar reglas de cálculo sin avisar al dueño; primero fijar el comportamiento con pruebas.
 - Mantener visibles el aviso de "referencial" y las bases legales en el resultado.
-- `referencia/calculadora_v8.html` es la versión original y la fuente de verdad del comportamiento actual.
+- `referencia/calculadora_v8.html` es la versión original y la referencia del comportamiento, salvo las correcciones legales aprobadas por el dueño, que se anotan una por una en `pruebas/correcciones.js`.
 
 ## Etapa 1 (en curso)
 1. Proyecto creado y publicado en GitHub (hecho).
@@ -31,7 +31,7 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 ## Entorno
 - Sin Node.js local: las pruebas corren en GitHub Actions (Node y Chrome) y en el navegador (`pruebas/index.html`).
 - Servidor local sin caché: `python3 pruebas/servidor-local.py` (puerto 8642). Con `http.server` normal el navegador guarda copias viejas de los archivos.
-- Si un cambio de reglas es intencional, los resultados esperados se actualizan a propósito (y se avisa al dueño); `pruebas/esperados.js` hoy refleja la v8.
+- Si un cambio de reglas es intencional, se avisa al dueño, se escribe primero su prueba y la diferencia con la v8 se anota en `pruebas/correcciones.js`. `pruebas/esperados.js` siempre refleja la v8 (se genera desde ella; no editar a mano).
 - GitHub CLI en `~/.local/bin/gh`, sesión iniciada como `gustavoacuna1987-ux`.
 - Pruebas completas en local como en GitHub: con el servidor local andando, `python3 pruebas/correr-chrome.py`. No usar `--virtual-time-budget`: no espera al lector de imágenes (Tesseract trabaja en segundo plano).
 - PDFs que son imagen: se leen con Tesseract.js (`web/vendor/tesseract/`, viene del prototipo de cámara) en `web/calculadora/lector-imagen.js` y `web/motor/ocr.js`. Para probar con documentos reales, servirlos desde fuera del repositorio.
