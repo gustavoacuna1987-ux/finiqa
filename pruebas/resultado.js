@@ -26,6 +26,20 @@ function diferencias(esp, obt, ruta, out){
   return out;
 }
 
+// Diferencias con la v8 que no son las anotadas como intencionales en pruebas/correcciones.js.
+// Devuelve las que sobran (no anotadas) y las que faltan (anotadas pero que ya no aparecen): vacía si todo calza.
+function sinCorrecciones(id, difs, X){
+  var anot=((X && X[id] && X[id].cambios)||[]).slice(), out=[];
+  function t(v){ return v===undefined ? '(no existe)' : sinMiles(JSON.stringify(v)); }
+  difs.forEach(function(d){
+    var i=-1;
+    anot.some(function(a, k){ if(a.ruta===d.ruta && t(a.v8)===t(d.esperado) && t(a.ahora)===t(d.obtenido)){ i=k; return true; } return false; });
+    if(i>=0) anot.splice(i,1); else out.push(d);
+  });
+  anot.forEach(function(a){ out.push({ruta:a.ruta+' (corrección anotada que ya no aparece)', esperado:a.ahora, obtenido:a.v8}); });
+  return out;
+}
+
 /* ---------- Cálculo ---------- */
 function desdeMotor(R, manual){
   manual=manual||{};
@@ -206,6 +220,6 @@ function importarEnPantalla(win, urls){
   });
 }
 
-return {sinMiles:sinMiles, diferencias:diferencias, desdeMotor:desdeMotor, calcularCaso:calcularCaso, desdePantalla:desdePantalla, aplicarCaso:aplicarCaso,
+return {sinMiles:sinMiles, diferencias:diferencias, sinCorrecciones:sinCorrecciones, desdeMotor:desdeMotor, calcularCaso:calcularCaso, desdePantalla:desdePantalla, aplicarCaso:aplicarCaso,
   importarConMotor:importarConMotor, importarEnPantalla:importarEnPantalla};
 });

@@ -1,7 +1,8 @@
 /* Finiqa · Motor de cálculo del finiquito.
  * Módulo puro: no toca la pantalla ni el navegador. Recibe los datos del formulario
  * (como texto, igual que los escribe la persona) y devuelve el detalle del finiquito.
- * Las reglas son una copia exacta de referencia/calculadora_v8.html; no cambiarlas sin pruebas.
+ * Las reglas vienen de referencia/calculadora_v8.html; no cambiarlas sin pruebas.
+ * Las correcciones legales posteriores a la v8 están anotadas en pruebas/correcciones.js.
  * Funciona en el navegador (window.FiniqaMotor) y en Node (require). */
 (function(root, factory){
   var M = factory();
@@ -35,7 +36,7 @@ var CAUSALES = {
   '159_4': {nombre:'Vencimiento del plazo (art. 159 N°4)', juicio:50,
             info:'No hay indemnización por años de servicio. Sí vacaciones y sueldo pendiente. Ojo: si el contrato se renovó por segunda vez, o seguiste trabajando después del vencimiento, pasó a ser indefinido.'},
   '159_5': {nombre:'Conclusión de la obra (art. 159 N°5)', obra:true, afc:true, juicio:50,
-            info:'En contratos por obra o faena firmados desde 2019 corresponde una indemnización de 2,5 días de remuneración por cada mes trabajado (Ley 21.122), además de vacaciones y sueldo pendiente.'},
+            info:'En contratos por obra o faena firmados desde 2019 corresponde una indemnización por cada mes trabajado (Ley 21.122): 2,5 días de remuneración por mes si el contrato empezó desde 2022, y entre 1 y 2 días si empezó entre 2019 y 2021. Además, vacaciones y sueldo pendiente.'},
   '159_6': {nombre:'Caso fortuito (art. 159 N°6)', juicio:50,
             info:'Causal excepcional, como un incendio o terremoto que hace imposible seguir. No hay indemnización legal. Si no se cumplen los requisitos, puedes demandar.'},
   '171':   {nombre:'Autodespido (art. 171)', ias:true, aviso:'siempre', recargo:true,
@@ -93,7 +94,7 @@ var PARAMS = {
 // UF del último día de cada mes y UTM de cada mes (fuente: Banco Central y SII, vía mindicador.cl)
 var IND = {"uf":{"2024-01":36733.04,"2024-02":36856.5,"2024-03":37093.52,"2024-04":37261.98,"2024-05":37438.91,"2024-06":37571.86,"2024-07":37578.95,"2024-08":37754.47,"2024-09":37910.42,"2024-10":37971.42,"2024-11":38247.92,"2024-12":38416.69,"2025-01":38384.41,"2025-02":38647.94,"2025-03":38894.11,"2025-04":39075.41,"2025-05":39189.45,"2025-06":39267.07,"2025-07":39179.01,"2025-08":39383.07,"2025-09":39485.65,"2025-10":39597.67,"2025-11":39643.59,"2025-12":39727.96,"2026-01":39706.07,"2026-02":39790.63,"2026-03":39841.72,"2026-04":40120.2,"2026-05":40610.69,"2026-06":40820.31,"2026-07":40844.79,"2026-08":40873.77,"2026-09":41057.2,"2026-10":41247.63},"utm":{"2024-12":67294,"2024-11":66628,"2024-10":66561,"2024-09":66362,"2024-08":65901,"2024-07":65967,"2024-06":65770,"2024-05":65443,"2024-04":65182,"2024-03":64793,"2024-02":64343,"2024-01":64666,"2025-12":69542,"2025-11":69542,"2025-10":69265,"2025-09":69265,"2025-08":68647,"2025-07":68923,"2025-06":68785,"2025-05":68648,"2025-04":68306,"2025-03":68034,"2025-02":67294,"2025-01":67429,"2026-11":72440,"2026-10":72151,"2026-09":71721,"2026-08":71649,"2026-07":71649,"2026-06":71506,"2026-05":70588,"2026-04":69889,"2026-03":69889,"2026-02":69611,"2026-01":69751},"ufUltima":["2026-11-09",41295.46]};
 // Ingreso mínimo mensual (trabajadores de 18 a 65 años), con la fecha desde la que rige
-var IMM_HIST = [['2023-05-01',460000],['2024-07-01',500000],['2025-01-01',510500],['2025-05-01',529000],['2026-01-01',539000],['2026-05-01',553553]];
+var IMM_HIST = [['2023-05-01',440000],['2023-09-01',460000],['2024-07-01',500000],['2025-01-01',510636],['2025-05-01',529000],['2026-01-01',539000],['2026-05-01',553553]];
 // Suma a la tabla los valores de datos/indicadores.json (se actualiza a diario desde mindicador.cl).
 // Solo acepta meses "aaaa-mm" y valores dentro de los rangos de PARAMS. Devuelve cuántos valores cambiaron.
 function agregarIndicadores(j){
@@ -202,7 +203,8 @@ function feriadosAnio(Y){
   var p=pascua(Y); out.push(iso(p-2*DAY), iso(p-DAY));
   add(5,1); add(5,21); add(6, SOLSTICIO[Y]||21);
   trasladable(6,29); add(7,16); add(8,15);
-  if(dow(Date.UTC(Y,8,17))===1) add(9,17);
+  var w17=dow(Date.UTC(Y,8,17));
+  if(w17===1 || (w17===5 && Y>=2017)) add(9,17); // lunes (Ley 20.215) o viernes (Ley 20.983)
   add(9,18); add(9,19);
   if(dow(Date.UTC(Y,8,20))===5) add(9,20);
   trasladable(10,12);
@@ -235,6 +237,8 @@ function impuestoUnico(base, utm){
   for(var i=0;i<TRAMOS.length;i++){ if(u>TRAMOS[i][0]) tr=TRAMOS[i]; }
   return Math.max(0, base*tr[1] - tr[2]*utm);
 }
+// El empleador aporta a la cuenta individual del seguro de cesantía como máximo 11 años por relación laboral (art. 9 Ley 19.728).
+var MESES_MAX_AFC = 132;
 function factorObra(fi){
   if(fi<Date.UTC(2020,6,1)) return 1;
   if(fi<Date.UTC(2021,6,1)) return 1.5;
@@ -304,9 +308,10 @@ function calcular(S, AUTO){
 
   // Indemnización por años de servicio
   var ias=0, iasObra=0, aviso=0, recargo=0, vol=0;
+  if(casa && ant) W.push(['info','En casa particular el finiquito no incluye indemnización por años de servicio: tu empleador la financia mes a mes con un aporte de 1,11% de tu sueldo a una cuenta en tu AFP (4,11% hasta septiembre de 2020), por un máximo de 11 años. Es “a todo evento”: la retiras en la AFP con el finiquito, cualquiera sea la causa del término, también si renuncias. Desde octubre de 2020 además tienes seguro de cesantía (AFC).']);
   if(cz.ias && ant){
     if(casa){
-      W.push(['info','En casa particular la indemnización por años de servicio la financia el empleador mes a mes (4,11% en tu AFP). La retiras en la AFP presentando el finiquito; no la paga el empleador directamente.']);
+      // nada que pagar en el finiquito: ver el aviso de arriba
     } else if(ant.y<1){
       W.push(['warn','Trabajaste menos de un año, así que no corresponde indemnización por años de servicio. Sí el aviso previo (si aplica), las vacaciones y el sueldo pendiente.']);
     } else {
@@ -433,14 +438,17 @@ function calcular(S, AUTO){
     else if(ft){
       var desde=Math.max(fi, Date.UTC(2002,9,1)), dm2=diff(desde, ft+DAY);
       var mesesCot=dm2.tm + dm2.d/30;
+      var afcTope = mesesCot>MESES_MAX_AFC;
+      if(afcTope) mesesCot=MESES_MAX_AFC;
       var rate = S.tipo==='indefinido' ? .016 : .028;
       var baseImp=Math.min(sueldo+fijos+grat+promVar, topeAfcUF*uf);
       afcImp=baseImp*rate*mesesCot;
     }
     afcImp=Math.min(afcImp, iasBase);
+    if(afcImp>0 && S.afcMode!=='monto' && fi<Date.UTC(2002,9,2)) W.push(['info','Ingresaste antes de octubre de 2002, cuando el seguro de cesantía era voluntario para los contratos que ya existían. Si nunca te afiliaste, no hay aporte que descontar: revisa tu cartola en afc.cl y, si es tu caso, elige “No lo descuentan”.']);
     if(afcImp>0) L.push({g:'desc', k:'desc', label:'Aporte del empleador al seguro de cesantía', sub:'art. 13 Ley 19.728', amount:afcImp,
       how: S.afcMode==='monto' ? 'Monto que ingresaste. Lo puedes retirar de tu cuenta en la AFC.' :
-        'Estimado: '+money(Math.min(sueldo+fijos+grat+promVar, topeAfcUF*uf))+' imponible × '+(S.tipo==='indefinido'?'1,6%':'2,8%')+' × '+num(diff(Math.max(fi,Date.UTC(2002,9,1)), ft+DAY).tm)+' meses. No incluye la rentabilidad del fondo, así que el descuento real suele ser algo mayor. Tu cartola está en afc.cl. Este dinero lo puedes retirar en la AFC.'});
+        'Estimado: '+money(Math.min(sueldo+fijos+grat+promVar, topeAfcUF*uf))+' imponible × '+(S.tipo==='indefinido'?'1,6%':'2,8%')+' × '+(afcTope ? num(MESES_MAX_AFC)+' meses (el empleador aporta a tu cuenta como máximo 11 años, art. 9 Ley 19.728)' : num(diff(Math.max(fi,Date.UTC(2002,9,1)), ft+DAY).tm)+' meses')+'. No incluye la rentabilidad del fondo, así que el descuento real suele ser algo mayor. Tu cartola está en afc.cl. Este dinero lo puedes retirar en la AFC.'});
   }
   var dOt=M('descOtros');
   if(dOt>0) L.push({g:'desc', k:'desc', label:'Anticipos y préstamos', sub:'Autorizados por ti', amount:dOt, how:'Monto que ingresaste.'});
@@ -548,7 +556,7 @@ return {
   // formato
   money:money, num:num, plural:plural, nf0:nf0,
   // tablas
-  AFP:AFP, TRAMOS:TRAMOS, CAUSALES:CAUSALES, TIPOS:TIPOS, DEFAULTS:DEFAULTS, EJEMPLO:EJEMPLO, PARAMS:PARAMS, IND:IND, IMM_HIST:IMM_HIST, SOLSTICIO:SOLSTICIO, GRUPOS:GRUPOS,
+  AFP:AFP, TRAMOS:TRAMOS, CAUSALES:CAUSALES, TIPOS:TIPOS, MESES_MAX_AFC:MESES_MAX_AFC, DEFAULTS:DEFAULTS, EJEMPLO:EJEMPLO, PARAMS:PARAMS, IND:IND, IMM_HIST:IMM_HIST, SOLSTICIO:SOLSTICIO, GRUPOS:GRUPOS,
   // lectura de números
   parseMoney:parseMoney, parseSmart:parseSmart, parseDec:parseDec,
   // valores legales

@@ -1,8 +1,8 @@
 /* Finiqa · Pruebas del motor de cálculo.
- * Usa: FiniqaMotor, FiniqaCasos, FiniqaEsperados, FiniqaResultado y Pruebas (globales en el navegador; en Node los define correr-node.js). */
+ * Usa: FiniqaMotor, FiniqaCasos, FiniqaEsperados, FiniqaCorrecciones, FiniqaResultado y Pruebas (globales en el navegador; en Node los define correr-node.js). */
 (function(root){
 'use strict';
-var M=root.FiniqaMotor, C=root.FiniqaCasos, E=root.FiniqaEsperados, Res=root.FiniqaResultado, P=root.Pruebas;
+var M=root.FiniqaMotor, C=root.FiniqaCasos, E=root.FiniqaEsperados, X=root.FiniqaCorrecciones, Res=root.FiniqaResultado, P=root.Pruebas;
 var U=Date.UTC, prueba=P.prueba, igual=P.igual, cerca=P.cerca;
 
 /* ---------- Funciones básicas ---------- */
@@ -105,7 +105,7 @@ prueba('UTM y descuentos', 'Fecha posterior a la tabla: usa el último valor y p
 });
 prueba('UTM y descuentos', 'Fecha anterior a la tabla: usa el primer valor y avisa', function(){
   var A=M.calcAuto({fechaTermino:'2023-06-30'});
-  igual([A.uf, A.utm, A.imm], [36733.04, 64666, 460000]);
+  igual([A.uf, A.utm, A.imm], [36733.04, 64666, 440000]);
   igual(A.faltan.length, 0);
   igual(A.ufNota, 'La fecha es anterior a los valores cargados (desde enero 2024). Ingresa la UF a mano.');
 });
@@ -160,14 +160,78 @@ prueba('Datos raros', 'Los avisos no cambian el cálculo', function(){
   igual(a.total, b.total);
 });
 
-/* ---------- Casos completos: el motor debe mostrar lo mismo que la v8 ---------- */
+/* ---------- Correcciones legales posteriores a la v8 (auditoría del 10-11-2026, aprobadas por el dueño) ---------- */
+function est(cambios){ return M.estimar(Object.assign({sueldoBase:'900.000', incluyeUltimoMes:false, vacSaldo:'0'}, cambios), {hoy:C.HOY}); }
+function linea(R, label){ return R.L.filter(function(x){ return x.label===label; })[0]; }
+function avisosR(R){ return M.avisos(R).map(function(w){ return w[0]+': '+w[1]; }).join('\n'); }
+var AFC='Aporte del empleador al seguro de cesantía';
+prueba('Correcciones legales', 'Seguro de cesantía estimado: el aporte del empleador se cuenta como máximo 11 años (art. 9 Ley 19.728)', function(){
+  var R=est({causal:'161', fechaIngreso:'2006-09-01', fechaTermino:'2026-09-30'});
+  cerca(linea(R, AFC).amount, 900000*0.016*132, 1e-6, '20 años: 132 meses y no 241');
+  cerca(R.total, 9900000+900000-1900800, 1e-6);
+  P.verdadero(/× 132 meses \(el empleador aporta a tu cuenta como máximo 11 años, art\. 9 Ley 19\.728\)/.test(linea(R, AFC).how), 'la explicación debe nombrar el máximo de 11 años: '+linea(R, AFC).how);
+  R=est({causal:'161', fechaIngreso:'2015-09-01', fechaTermino:'2026-09-30'});
+  cerca(linea(R, AFC).amount, 1900800, 1e-6, '11 años y 1 mes');
+  R=est({causal:'161', fechaIngreso:'2015-10-01', fechaTermino:'2026-09-30'});
+  cerca(linea(R, AFC).amount, 1900800, 1e-6, '11 años justos');
+  P.verdadero(/× 132 meses\. No incluye/.test(linea(R, AFC).how), '11 años justos no necesita la explicación del máximo');
+  R=est({causal:'161', fechaIngreso:'2016-10-01', fechaTermino:'2026-09-30'});
+  cerca(linea(R, AFC).amount, 900000*0.016*120, 1e-6, '10 años: sin cambio');
+  R=est({tipo:'plazo', causal:'161', fechaIngreso:'2014-10-01', fechaTermino:'2026-09-30'});
+  cerca(linea(R, AFC).amount, 900000*0.028*132, 1e-6, 'plazo fijo: 2,8% con el mismo máximo');
+  igual(M.MESES_MAX_AFC, 132);
+});
+prueba('Correcciones legales', 'Seguro de cesantía: aviso a quienes ingresaron antes de octubre de 2002', function(){
+  hay(avisosR(est({causal:'161', fechaIngreso:'1995-03-01', fechaTermino:'2026-09-30'})), /^info: Ingresaste antes de octubre de 2002, cuando el seguro de cesantía era voluntario/m);
+  noHay(avisosR(est({causal:'161', fechaIngreso:'2006-09-01', fechaTermino:'2026-09-30'})), /antes de octubre de 2002/);
+  noHay(avisosR(est({causal:'161', fechaIngreso:'1995-03-01', fechaTermino:'2026-09-30', afcMode:'no'})), /antes de octubre de 2002/);
+  noHay(avisosR(est({causal:'161', fechaIngreso:'1995-03-01', fechaTermino:'2026-09-30', afcMode:'monto', afcMonto:'500.000'})), /antes de octubre de 2002/);
+});
+prueba('Correcciones legales', 'Feriados: 17 de septiembre también cuando cae viernes (Ley 20.983)', function(){
+  function sept(Y){ return M.feriadosAnio(Y).filter(function(x){ return /-09-/.test(x); }); }
+  igual(sept(2027), ['2027-09-17','2027-09-18','2027-09-19']);
+  igual(sept(2021), ['2021-09-17','2021-09-18','2021-09-19']);
+  igual(sept(2032), ['2032-09-17','2032-09-18','2032-09-19']);
+  igual(sept(2026), ['2026-09-18','2026-09-19'], '2026 no cambia');
+  igual(sept(2010), ['2010-09-18','2010-09-19'], 'antes de la ley (2017) no aplica');
+  var c=M.habilesACorridos(U(2027,8,10), 5, M.feriadosSet(2027,''));
+  igual([c.corridos, c.inhabiles, M.iso(c.hasta)], [10, 5, '2027-09-20'], '5 días hábiles desde el 10-09-2027');
+});
+prueba('Correcciones legales', 'Ingreso mínimo histórico: 2023 y 2025', function(){
+  igual(M.calcAuto({fechaTermino:'2023-06-30'}).imm, 440000);
+  igual(M.calcAuto({fechaTermino:'2023-08-31'}).imm, 440000);
+  igual(M.calcAuto({fechaTermino:'2023-09-01'}).imm, 460000);
+  igual(M.calcAuto({fechaTermino:'2025-03-15'}).imm, 510636);
+  igual(M.calcAuto({fechaTermino:'2025-05-01'}).imm, 529000);
+});
+prueba('Correcciones legales', 'Casa particular: aporte de 1,11% a la AFP, a todo evento (Ley 21.269)', function(){
+  var c={tipo:'casa', fechaIngreso:'2018-03-01', fechaTermino:'2026-09-30'};
+  var t=avisosR(est(Object.assign({causal:'161d'}, c)));
+  hay(t, /^info: En casa particular el finiquito no incluye indemnización por años de servicio: .* aporte de 1,11% de tu sueldo/m);
+  noHay(t, /\(4,11% en tu AFP\)/);
+  hay(avisosR(est(Object.assign({causal:'159_2'}, c))), /cualquiera sea la causa del término, también si renuncias/);
+  noHay(avisosR(est({causal:'159_2', fechaIngreso:'2018-03-01', fechaTermino:'2026-09-30'})), /casa particular/);
+  var R=est(Object.assign({causal:'161d'}, c));
+  P.verdadero(!linea(R, 'Indemnización por años de servicio'), 'en casa particular el finiquito no lleva años de servicio');
+});
+prueba('Correcciones legales', 'La nota de «Terminó la obra» describe la misma escala que el cálculo', function(){
+  var n=M.CAUSALES['159_5'].info;
+  P.verdadero(n.indexOf('de 2,5 días de remuneración por cada mes trabajado')<0, 'ya no debe prometer 2,5 días a todos');
+  P.verdadero(/2,5 días de remuneración por mes si el contrato empezó desde 2022, y entre 1 y 2 días si empezó entre 2019 y 2021/.test(n), n);
+});
+
+/* ---------- Casos completos: el motor debe mostrar lo mismo que la v8, salvo las correcciones anotadas en correcciones.js ---------- */
 C.calculo.forEach(function(caso){
   prueba(caso.grupo, caso.nombre, function(){
     var esp=E && E.calculo && E.calculo[caso.id];
     if(!esp) throw new Error('Falta el resultado esperado de la v8 para "'+caso.id+'"');
     var obt=Res.calcularCaso(caso, C.HOY);
-    var d=Res.diferencias(esp, obt);
-    if(d.length){ var e=new Error(d.length+' diferencia(s) con la v8. Primera: '+d[0].ruta); e.detalle=d; throw e; }
+    var d=Res.sinCorrecciones(caso.id, Res.diferencias(esp, obt), X);
+    if(d.length){ var e=new Error(d.length+' diferencia(s) con la v8 que no están anotadas en correcciones.js. Primera: '+d[0].ruta); e.detalle=d; throw e; }
   });
+});
+prueba('Correcciones legales', 'Toda corrección anotada corresponde a un caso que existe', function(){
+  var ids=C.calculo.map(function(c){ return c.id; });
+  Object.keys(X||{}).forEach(function(id){ P.verdadero(ids.indexOf(id)>=0, 'correcciones.js nombra un caso que no existe: '+id); P.verdadero(X[id].motivo, 'falta el motivo de '+id); });
 });
 })(typeof self!=='undefined' ? self : globalThis);
