@@ -36,7 +36,7 @@ var CAUSALES = {
   '159_4': {nombre:'Vencimiento del plazo (art. 159 N°4)', juicio:50,
             info:'No hay indemnización por años de servicio. Sí vacaciones y sueldo pendiente. Ojo: si el contrato se renovó por segunda vez, o seguiste trabajando después del vencimiento, pasó a ser indefinido.'},
   '159_5': {nombre:'Conclusión de la obra (art. 159 N°5)', obra:true, afc:true, juicio:50,
-            info:'En contratos por obra o faena firmados desde 2019 corresponde una indemnización por cada mes trabajado (Ley 21.122): 2,5 días de remuneración por mes si el contrato empezó desde 2022, y entre 1 y 2 días si empezó entre 2019 y 2021. Además, vacaciones y sueldo pendiente.'},
+            info:'En contratos por obra o faena firmados desde 2019 que duraron un mes o más corresponde una indemnización por cada mes trabajado (Ley 21.122): 2,5 días de remuneración por mes si el contrato empezó desde 2022, y entre 1 y 2 días si empezó entre 2019 y 2021. Además, vacaciones y sueldo pendiente.'},
   '159_6': {nombre:'Caso fortuito (art. 159 N°6)', juicio:50,
             info:'Causal excepcional, como un incendio o terremoto que hace imposible seguir. No hay indemnización legal. Si no se cumplen los requisitos, puedes demandar.'},
   '171':   {nombre:'Autodespido (art. 171)', ias:true, aviso:'siempre', recargo:true,
@@ -328,6 +328,7 @@ function calcular(S, AUTO){
   if(cz.obra && ant){
     if(S.tipo!=='obra') W.push(['info','La indemnización por fin de obra solo aplica a contratos por obra o faena.']);
     else if(fi<Date.UTC(2019,0,1)) W.push(['info','Los contratos por obra firmados antes de 2019 no tienen indemnización por fin de obra.']);
+    else if(ant.tm<1) W.push(['warn','Tu contrato por obra duró menos de un mes, así que no corresponde la indemnización por término de obra: la ley la da cuando el contrato estuvo vigente un mes o más (art. 163). Sí las vacaciones y el sueldo pendiente.']);
     else {
       var meses = ant.tm + (ant.d>15?1:0), dpm=factorObra(fi);
       iasObra = base172/30*dpm*meses;

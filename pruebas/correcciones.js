@@ -3,9 +3,8 @@
  * la ruta dentro del resultado, lo que mostraba la v8 y lo que muestra el motor ahora.
  * Las pruebas fallan si aparece una diferencia que no está aquí, o si una anotada deja de aparecer.
  * Origen: auditoría legal del 10-11-2026 (hallazgos A1, A4 y B1), aprobada por el dueño ese día.
- * A3 (feriado del viernes 17 de septiembre) y B2 (nota de la causal) no cambian ninguno de estos casos:
- * tienen sus propias pruebas en pruebas-motor.js («Correcciones legales»).
- * A2 (fin de obra de menos de un mes) NO está aplicada: espera la revisión del abogado.
+ * A2 (fin de obra de menos de un mes), A3 (feriado del viernes 17 de septiembre) y B2 (nota de la causal)
+ * no cambian ninguno de estos casos: tienen sus propias pruebas en pruebas-motor.js («Correcciones legales»).
  * Para agregar una corrección: avisar al dueño, escribir primero su prueba y luego anotar aquí la diferencia. */
 (function(root){
 var X = {

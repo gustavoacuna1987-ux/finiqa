@@ -292,6 +292,10 @@ prueba('Sitio', 'Los fundamentos de la portada coinciden con el motor (fin de ob
     // Casa particular: el mismo porcentaje que explica el motor (1,11% desde octubre de 2020).
     var casa=Mo.avisos(Mo.estimar({tipo:'casa', causal:'161d', fechaIngreso:'2020-01-01', fechaTermino:'2025-06-30', sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)})).map(function(w){ return w[1]; }).join(' ');
     verdadero(casa.indexOf('1,11%')>=0 && ias.indexOf('1,11%')>=0 && ias.indexOf('cualquiera sea la causa del término')>=0, 'casa particular: la portada y el motor deben decir 1,11% y que se cobra cualquiera sea la causa');
+    // Fin de obra: un mes o más de contrato (igual que en el motor).
+    verdadero(obra.indexOf('que duró un mes o más')>=0, 'fin de obra: la portada debe decir que el contrato duró un mes o más');
+    var corta=Mo.estimar({tipo:'obra', causal:'159_5', fechaIngreso:'2024-06-03', fechaTermino:'2024-06-28', sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)});
+    verdadero(!corta.L.some(function(x){ return x.label==='Indemnización por término de obra'; }), 'una obra de menos de un mes no lleva indemnización');
     // La fracción: 6 meses exactos no suman un año; 6 meses y 1 día, sí (igual que en el motor).
     function anios(ft){ var L=Mo.estimar({fechaIngreso:'2020-01-01', fechaTermino:ft, sueldoBase:'600.000'}, {hoy:Date.UTC(2026,9,18)}).L; return L.filter(function(x){ return x.label==='Indemnización por años de servicio'; })[0].sub; }
     verdadero(/^5 años/.test(anios('2025-06-30')), '6 meses exactos no deben sumar un año: '+anios('2025-06-30'));

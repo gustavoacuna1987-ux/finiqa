@@ -164,7 +164,7 @@ prueba('Datos raros', 'Los avisos no cambian el cálculo', function(){
 function est(cambios){ return M.estimar(Object.assign({sueldoBase:'900.000', incluyeUltimoMes:false, vacSaldo:'0'}, cambios), {hoy:C.HOY}); }
 function linea(R, label){ return R.L.filter(function(x){ return x.label===label; })[0]; }
 function avisosR(R){ return M.avisos(R).map(function(w){ return w[0]+': '+w[1]; }).join('\n'); }
-var AFC='Aporte del empleador al seguro de cesantía';
+var AFC='Aporte del empleador al seguro de cesantía', OBRA='Indemnización por término de obra';
 prueba('Correcciones legales', 'Seguro de cesantía estimado: el aporte del empleador se cuenta como máximo 11 años (art. 9 Ley 19.728)', function(){
   var R=est({causal:'161', fechaIngreso:'2006-09-01', fechaTermino:'2026-09-30'});
   cerca(linea(R, AFC).amount, 900000*0.016*132, 1e-6, '20 años: 132 meses y no 241');
@@ -186,6 +186,21 @@ prueba('Correcciones legales', 'Seguro de cesantía: aviso a quienes ingresaron 
   noHay(avisosR(est({causal:'161', fechaIngreso:'2006-09-01', fechaTermino:'2026-09-30'})), /antes de octubre de 2002/);
   noHay(avisosR(est({causal:'161', fechaIngreso:'1995-03-01', fechaTermino:'2026-09-30', afcMode:'no'})), /antes de octubre de 2002/);
   noHay(avisosR(est({causal:'161', fechaIngreso:'1995-03-01', fechaTermino:'2026-09-30', afcMode:'monto', afcMonto:'500.000'})), /antes de octubre de 2002/);
+});
+prueba('Correcciones legales', 'Fin de obra: sin indemnización si el contrato duró menos de un mes (art. 163)', function(){
+  var o={tipo:'obra', causal:'159_5'};
+  var R=est(Object.assign({fechaIngreso:'2026-09-01', fechaTermino:'2026-09-20'}, o));
+  P.verdadero(!linea(R, OBRA), '20 días: no corresponde indemnización');
+  igual(R.total, 0);
+  hay(avisosR(R), /^warn: Tu contrato por obra duró menos de un mes, así que no corresponde la indemnización por término de obra/m);
+  R=est(Object.assign({fechaIngreso:'2026-09-01', fechaTermino:'2026-09-29'}, o));
+  P.verdadero(!linea(R, OBRA), '29 días: no corresponde indemnización');
+  R=est(Object.assign({fechaIngreso:'2026-09-01', fechaTermino:'2026-09-30', afcMode:'no'}, o));
+  cerca(linea(R, OBRA).amount, 75000, 1e-6, 'un mes justo: 2,5 días'); noHay(avisosR(R), /menos de un mes/);
+  R=est(Object.assign({fechaIngreso:'2026-08-01', fechaTermino:'2026-09-15', afcMode:'no'}, o));
+  cerca(linea(R, OBRA).amount, 75000, 1e-6, 'un mes y 15 días: un mes');
+  R=est(Object.assign({fechaIngreso:'2026-08-01', fechaTermino:'2026-09-16', afcMode:'no'}, o));
+  cerca(linea(R, OBRA).amount, 150000, 1e-6, 'un mes y 16 días: dos meses');
 });
 prueba('Correcciones legales', 'Feriados: 17 de septiembre también cuando cae viernes (Ley 20.983)', function(){
   function sept(Y){ return M.feriadosAnio(Y).filter(function(x){ return /-09-/.test(x); }); }
@@ -218,6 +233,7 @@ prueba('Correcciones legales', 'La nota de «Terminó la obra» describe la mism
   var n=M.CAUSALES['159_5'].info;
   P.verdadero(n.indexOf('de 2,5 días de remuneración por cada mes trabajado')<0, 'ya no debe prometer 2,5 días a todos');
   P.verdadero(/2,5 días de remuneración por mes si el contrato empezó desde 2022, y entre 1 y 2 días si empezó entre 2019 y 2021/.test(n), n);
+  P.verdadero(/duraron un mes o más/.test(n), n);
 });
 
 /* ---------- Casos completos: el motor debe mostrar lo mismo que la v8, salvo las correcciones anotadas en correcciones.js ---------- */
