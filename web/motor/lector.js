@@ -5,6 +5,10 @@
  *   «Monto horas extras» y «Monto h.menos» son conceptos que no entran en la base (y cuentan para cuadrar con el total),
  *   la «fecha de contrato» se usa como fecha de ingreso si no hay otra, y «S/C» se reconoce como seguro de cesantía;
  *   las dos últimas se muestran con un aviso para que la persona las confirme.
+ * Agregado el 11-11-2026 (aprobado por el dueño): control «no parece una liquidación». Si el documento no trae las
+ *   palabras habituales de una liquidación (o parece un finiquito), se avisa, no se marca ninguna línea ni se ofrecen
+ *   otros datos, y no se puede aplicar sin marcar algo a mano. Vale para todo lo que pase por parseLiq:
+ *   PDF con texto, PDF de imagen y fotos de la cámara.
  * Funciona en el navegador (window.FiniqaLector, requiere FiniqaMotor) y en Node (require). */
 (function(root, factory){
   if(typeof module==='object' && module.exports) module.exports = factory(require('./calculo.js'));
@@ -108,11 +112,32 @@ var RE_MONTO_CONCEPTO=/^monto (h\.? ?menos|horas?|hh|h\.? ?extra|sobretiempo|atr
 // "S/C": abreviatura habitual del seguro de cesantía (por ejemplo, "S/C TRABAJADOR MODELO").
 var RE_SC=/^s ?\/ ?c\b/;
 var RE_DESC=/^ant\b|^s ?\/ ?c\b|desempleo|\bafp\b|fonasa|isapre|salud|cesantia|\bafc\b|impuesto|anticipo|prestamo|ccaf|caja (de )?compensacion|la araucana|los andes|los heroes|18 de septiembre|\bapv\b|ahorro|cuenta 2|sindica|cuota|descuento|retencion|seguro|dental|mutual|pension|\bsis\b|credito|cotizacion|aporte/;
+// Palabras habituales de una liquidación de sueldo. Con menos de SENALES_MIN, el documento no parece una liquidación.
+var SENALES=[
+  ['liquidación', /\bliquidacion\b/],
+  ['haberes', /\bhaberes\b/],
+  ['descuentos', /\bdescuentos?\b/],
+  ['líquido', /\bliquido\b/],
+  ['AFP', /\bafp\b|\bprevision\b/],
+  ['salud', /\bsalud\b|\bfonasa\b|\bisapre\b/],
+  ['imponible', /\bimponibles?\b|\btributable\b/],
+  ['días trabajados', /dias trabajados/],
+  ['sueldo base', /sueldo base|salario base|sueldo mensual/],
+  ['gratificación', /\bgratificacion\b/],
+  ['seguro de cesantía', /\bcesantia\b|\bafc\b/],
+  ['impuesto único', /impuesto unico/]
+];
+var SENALES_MIN=3;
+// Un finiquito tiene varias de esas palabras, pero sus montos no son un sueldo.
+var RE_FINIQUITO=/\bfiniquito\b/, RE_FINIQUITO_MONTOS=/indemnizacion|anos de servicio|aviso previo|feriado proporcional/;
 var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
 function parseLiq(rows){
   var P={items:[], afp:null, fechaIngreso:null, vacSaldo:null, dias:null, contrato:null, cesantia:false, totalHab:null, periodo:null};
   var full=norm(rows.map(function(r){ return r.text; }).join(' \n '));
+  P.senales=SENALES.filter(function(x){ return x[1].test(full); }).map(function(x){ return x[0]; });
+  P.pareceFiniquito=RE_FINIQUITO.test(full) && RE_FINIQUITO_MONTOS.test(full);
+  P.pareceLiquidacion=P.senales.length>=SENALES_MIN && !P.pareceFiniquito;
   var mode=null, descX=null, page=-1, seen={}, seccionVista=false;
   rows.forEach(function(r){
     if(r.page!==page){ page=r.page; mode=null; descX=null; }
@@ -202,11 +227,21 @@ function parseLiq(rows){
 
 /* ---------- Varias liquidaciones: revisión y uso de los datos ---------- */
 // Cada archivo leído es {name, p: resultado de parseLiq, sel: destino elegido por línea, idx: orden de carga}.
-function nuevoArchivo(name, p, idx){ return {name:name, p:p, sel:p.items.map(function(it){ return it.dest; }), idx:idx}; }
+// Si el documento no parece una liquidación, ninguna línea queda marcada: la persona elige a mano.
+function esLiquidacion(f){ return f.p.pareceLiquidacion!==false; }
+function nuevoArchivo(name, p, idx){ return {name:name, p:p, sel:p.items.map(function(it){ return p.pareceLiquidacion===false ? 'skip' : it.dest; }), idx:idx}; }
+// Aviso para mostrar sobre el archivo en la pantalla de revisión ('' si parece una liquidación).
+function avisoArchivo(f){
+  if(esLiquidacion(f)) return '';
+  if(f.p.pareceFiniquito) return 'Este archivo parece un finiquito y no una liquidación de sueldo, así que no marcamos nada. Los montos del finiquito que te ofrecen van más abajo, en «Compara con lo que te ofrecen». Para completar tu sueldo, sube tu liquidación.';
+  return 'Este archivo no parece una liquidación de sueldo: no encontramos las palabras habituales (haberes, descuentos, AFP, salud, líquido a pagar). Por eso no marcamos nada. Si te equivocaste de archivo, presiona «Ignorar». Si es tu liquidación, elige a mano qué es cada línea.';
+}
 function periodoTxt(p){ return p ? MESES[p.m].charAt(0).toUpperCase()+MESES[p.m].slice(1)+' '+p.y : ''; }
-// Más reciente primero (por período; si no hay período, la última cargada).
+// Más reciente primero (por período; si no hay período, la última cargada). Los archivos que no parecen
+// liquidaciones van al final: nunca son «la más reciente» si hay una liquidación.
 function sortedFiles(files){
   return files.slice().sort(function(a,b){
+    var la=esLiquidacion(a)?1:0, lb=esLiquidacion(b)?1:0; if(la!==lb) return lb-la;
     var ka=a.p.periodo?a.p.periodo.y*12+a.p.periodo.m:-1, kb=b.p.periodo?b.p.periodo.y*12+b.p.periodo.m:-1;
     return (kb-ka) || (b.idx-a.idx);
   });
@@ -240,12 +275,13 @@ function extras(files){
   var sorted=sortedFiles(files), latest=sorted[0];
   var fecha=null, deContrato=false, afp=null, contrato=null, inferido=false, abreviado=false;
   sorted.forEach(function(f){
+    if(!esLiquidacion(f)) return; // de un documento que no es liquidación no se ofrecen otros datos
     if(!fecha && f.p.fechaIngreso){ fecha=f.p.fechaIngreso; deContrato=!!f.p.fechaDeContrato; }
     afp=afp||f.p.afp;
     if(!contrato && f.p.contrato){ contrato=f.p.contrato; inferido=!!f.p.contratoInferido; abreviado=inferido && !!f.p.cesantiaAbreviada; }
   });
   return {fechaIngreso:fecha, fechaDeContrato:deContrato, afp:(afp && Motor.AFP[afp]) ? afp : null, contrato:contrato, contratoInferido:inferido, cesantiaAbreviada:abreviado,
-    vacSaldo: latest.p.vacSaldo, diasParciales: (latest.p.dias && latest.p.dias<30) ? latest.p.dias : null};
+    vacSaldo: esLiquidacion(latest) ? latest.p.vacSaldo : null, diasParciales: (esLiquidacion(latest) && latest.p.dias && latest.p.dias<30) ? latest.p.dias : null};
 }
 function factorEscala(latest, escalar){ return escalar && latest.p.dias>0 && latest.p.dias<30 ? 30/latest.p.dias : 1; }
 function sumaVariables(f){ var s=0; f.p.items.forEach(function(it,i){ if(f.sel[i]==='var') s+=it.amount; }); return s; }
@@ -258,6 +294,12 @@ function importTotals(files, escalar){
   var vars=sorted.slice(0,3).map(sumaVariables);
   return {tot:tot, vars:vars, files:sorted, latest:latest, escala:escala};
 }
+// ¿Hay algo marcado para llevar al formulario? Sin nada marcado no se aplica: aplicar así borraba lo ya escrito.
+function hayMontosMarcados(files){
+  if(!files.length) return false;
+  var T=importTotals(files, false);
+  return Object.keys(T.tot).some(function(k){ return T.tot[k]>0; }) || T.vars.some(function(v){ return v>0; });
+}
 // Valores que se escriben en el formulario al presionar "Usar estos datos".
 // usar: {escala, fecha, afp, contrato, vac} (las casillas marcadas). Devuelve {campos, radios, nota}.
 function planImportacion(files, usar){
@@ -265,7 +307,7 @@ function planImportacion(files, usar){
   var sorted=sortedFiles(files), latest=sorted[0];
   var escala=factorEscala(latest, usar.escala);
   var fecha=null, afp=null, contrato=null;
-  sorted.forEach(function(f){ fecha=fecha||f.p.fechaIngreso; afp=afp||f.p.afp; contrato=contrato||f.p.contrato; });
+  sorted.forEach(function(f){ if(!esLiquidacion(f)) return; fecha=fecha||f.p.fechaIngreso; afp=afp||f.p.afp; contrato=contrato||f.p.contrato; });
   var campos={}, radios={};
   var tot={sueldoBase:0,bonosFijos:0,gratMonto:0,colacion:0,movilizacion:0};
   latest.p.items.forEach(function(it,i){ var d=latest.sel[i]; if(d in tot) tot[d]+=it.amount; });
@@ -285,13 +327,14 @@ function planImportacion(files, usar){
   if(usar.fecha && fecha) campos.fechaIngreso=fecha;
   if(usar.afp && afp && Motor.AFP[afp]) campos.afp=afp;
   if(usar.contrato && contrato) campos.tipo=contrato;
-  if(usar.vac && latest.p.vacSaldo!=null){ radios.vacMode='saldo'; campos.vacSaldo=num(latest.p.vacSaldo); }
+  if(usar.vac && esLiquidacion(latest) && latest.p.vacSaldo!=null){ radios.vacMode='saldo'; campos.vacSaldo=num(latest.p.vacSaldo); }
   return {campos:campos, radios:radios, nota:note};
 }
 
 return {
   norm:norm, abrirPdf:abrirPdf, pdfRows:pdfRows, segments:segments, parseLiq:parseLiq, cleanTok:cleanTok,
   RE_MONEY:RE_MONEY, RE_NUM:RE_NUM, DEST:DEST, RULES:RULES, MESES:MESES,
+  SENALES:SENALES, SENALES_MIN:SENALES_MIN, esLiquidacion:esLiquidacion, avisoArchivo:avisoArchivo, hayMontosMarcados:hayMontosMarcados,
   nuevoArchivo:nuevoArchivo, periodoTxt:periodoTxt, sortedFiles:sortedFiles, fileSum:fileSum, fileIssues:fileIssues, chequeo:chequeo,
   extras:extras, importTotals:importTotals, planImportacion:planImportacion
 };

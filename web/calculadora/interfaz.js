@@ -504,6 +504,8 @@ function renderReview(){
   files.forEach(function(f){
     var fi=imp.files.indexOf(f);
     h+='<div class="imp-file"><h3>'+esc(f.name)+(f.p.periodo?' <small>· '+Lx.periodoTxt(f.p.periodo)+'</small>':'')+' <span class="leida">· leída en tu navegador</span>'+(f===latest&&files.length>1?' <span class="tag">Más reciente</span>':'')+'</h3>';
+    var av=Lx.avisoArchivo(f);
+    if(av) h+='<div class="imp-check warn" data-aviso="no-liquidacion">'+esc(av)+'</div>';
     if(f.imagen) h+='<p class="hint">Este PDF es una imagen: reconocimos sus letras automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
     if(f.p.items.length){
       h+='<div class="cmp-wrap"><table class="imp"><thead><tr><th>Concepto en tu liquidación</th><th style="text-align:right">Monto</th><th>Usar como</th></tr></thead><tbody>';
@@ -535,15 +537,18 @@ function updatePreview(){
   var vs=T.vars.filter(function(v){ return v>0; });
   if(vs.length) parts.push('Comisiones (promedio) <strong>'+money(T.vars.reduce(function(a,b){return a+b;},0)/T.vars.length)+'</strong>');
   var bad=imp.files.some(function(f){ return Lx.fileIssues(f).length; });
+  // Sin nada marcado no se aplica (antes borraba lo ya escrito y decía «Listo»).
+  var vacio=!Lx.hayMontosMarcados(imp.files);
   var p=$('impPreview');
   if(p) p.innerHTML='<div class="imp-check'+(bad?' bad':'')+'">'+(parts.length?parts.join(' · '):'No hay montos marcados para el sueldo.')+(t.sueldoBase?'':'<br>Ninguna línea está marcada como sueldo base.')+'</div>';
-  var b=$('btnImpUsar'); if(b) b.disabled=bad;
-  var bl=$('impBlock'); if(bl) bl.hidden=!bad;
+  var b=$('btnImpUsar'); if(b) b.disabled=bad || vacio;
+  var bl=$('impBlock'); if(bl){ bl.hidden=!(bad || vacio); bl.textContent = bad ? 'Corrige lo marcado en rojo para continuar.' : 'Marca al menos una línea en «Usar como» para aplicar, o presiona «Ignorar».'; }
 }
 function setRadio(name, v){ var r=form.querySelector('input[name="'+name+'"][value="'+v+'"]'); if(r) r.checked=true; }
 function applyImport(){
   if(!imp.files.length) return;
   if(imp.files.some(function(f){ return Lx.fileIssues(f).length; })) return;
+  if(!Lx.hayMontosMarcados(imp.files)) return;
   var plan=Lx.planImportacion(imp.files, {escala:ck('impEscala'), fecha:ck('impFecha'), afp:ck('impAfp'), contrato:ck('impContrato'), vac:ck('impVac')});
   if(isExample){ setState(DEFAULTS); isExample=false; editedExample=false; $('banner').hidden=true; }
   Object.keys(plan.campos).forEach(function(k){ $(k).value=plan.campos[k]; });
