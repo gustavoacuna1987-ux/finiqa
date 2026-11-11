@@ -67,6 +67,77 @@ prueba('Lectura de PDFs sintéticos', 'La «fecha de contrato» se usa como fech
   igual([p.fechaIngreso, !!p.fechaDeContrato], ['2019-03-15', false]);
 });
 
+// Control «no parece una liquidación» (aprobado por el dueño el 11-11-2026). Vale para PDF con texto, PDF de imagen
+// y, cuando se publique, la cámara: todos pasan por parseLiq. Datos inventados.
+function texto(lineas){ return lineas.map(function(l){ var x=40; return {text:l, page:0, tokens:l.split(/\s+/).filter(Boolean).map(function(w){ var t={t:w, x:x}; x+=w.length*6+6; return t; })}; }); }
+var LIQ=['LIQUIDACION DE SUELDO Septiembre 2026', 'HABERES', 'Sueldo base 900.000', 'Gratificacion legal 219.000', 'Colacion 50.000', 'Total haberes 1.169.000',
+         'DESCUENTOS', 'AFP Habitat 11,27% 126.000', 'Salud Fonasa 7% 78.330', 'Liquido a pagar 964.670', 'Fecha de ingreso: 04/03/2019'];
+var BOLETA=['SUPERMERCADO EL AHORRO S.A.', 'RUT 76.123.456-7', 'BOLETA ELECTRONICA N 123456', 'PAN MARRAQUETA 1.290', 'LECHE ENTERA 1L 1.150', 'DETERGENTE 3KG 8.990', 'DESCUENTO CLUB 500', 'TOTAL 11.430', 'EFECTIVO 12.000'];
+var CARTOLA=['BANCO EJEMPLO CARTOLA CUENTA CORRIENTE', 'Octubre 2026', 'Transferencia recibida 450.000', 'Comision mantencion 3.990', 'Pago tarjeta de credito 120.000', 'Saldo final 291.520'];
+var LUZ=['EMPRESA ELECTRICA', 'Consumo energia 312 kWh 48.730', 'Cargo fijo 1.250', 'Transporte de electricidad 6.420', 'Total a pagar 56.400'];
+var OFERTA=['Estimado Juan:', 'Le ofrecemos el cargo de analista con contrato indefinido.', 'Sueldo base 1.200.000', 'Bono anual 500.000', 'Asignacion de colacion 60.000', 'Fecha de ingreso: 01-12-2026'];
+var FINIQUITO=['FINIQUITO DE CONTRATO DE TRABAJO', 'Indemnizacion por anos de servicio 7.200.000', 'Indemnizacion sustitutiva del aviso previo 900.000', 'Feriado proporcional 310.000',
+               'Descuento aporte empleador seguro de cesantia AFC 1.150.000', 'Liquido a pagar 7.260.000'];
+function archivo(lineas, i){ return Lx.nuevoArchivo('x'+(i||0)+'.pdf', Lx.parseLiq(texto(lineas)), i||0); }
+prueba('Documentos que no son liquidaciones', 'Una liquidación se reconoce por sus palabras habituales', function(){
+  var p=Lx.parseLiq(texto(LIQ));
+  igual(p.pareceLiquidacion, true);
+  P.verdadero(p.senales.length>=Lx.SENALES_MIN, 'señales encontradas: '+p.senales.join(', '));
+  var f=archivo(LIQ);
+  igual(f.sel, ['sueldoBase','gratMonto','colacion'], 'se preasigna como siempre');
+  igual(Lx.avisoArchivo(f), '');
+  igual(Lx.hayMontosMarcados([f]), true);
+  igual(Lx.extras([f]).fechaIngreso, '2019-03-04');
+});
+prueba('Documentos que no son liquidaciones', 'Boleta, cartola, cuenta y carta de oferta: se avisa y no se marca nada', function(){
+  [['boleta', BOLETA], ['cartola', CARTOLA], ['cuenta de la luz', LUZ], ['carta de oferta', OFERTA]].forEach(function(c){
+    var f=archivo(c[1]);
+    igual(f.p.pareceLiquidacion, false, c[0]+' (señales: '+f.p.senales.join(', ')+')');
+    P.verdadero(f.p.items.length>0, c[0]+': las líneas se siguen mostrando para revisar');
+    igual(f.sel.filter(function(d){ return d!=='skip'; }), [], c[0]+': ninguna línea queda marcada');
+    P.verdadero(/^Este archivo no parece una liquidación de sueldo/.test(Lx.avisoArchivo(f)), c[0]+': '+Lx.avisoArchivo(f));
+    igual(Lx.hayMontosMarcados([f]), false, c[0]);
+    var X=Lx.extras([f]);
+    igual([X.fechaIngreso, X.afp, X.contrato, X.vacSaldo, X.diasParciales], [null, null, null, null, null], c[0]+': no se ofrecen otros datos');
+    var plan=Lx.planImportacion([f], {fecha:true, afp:true, contrato:true, vac:true});
+    igual([plan.campos.fechaIngreso, plan.campos.tipo, plan.campos.afp], [undefined, undefined, undefined], c[0]+': no se escriben fecha, contrato ni AFP');
+  });
+  // Las palabras conocidas se siguen reconociendo (para que la persona pueda elegirlas), pero sin marcar.
+  var f=archivo(CARTOLA);
+  igual(f.p.items.filter(function(it){ return it.label==='Comision mantencion'; })[0].dest, 'var');
+  f=archivo(LUZ);
+  igual(f.p.items.filter(function(it){ return /Transporte/.test(it.label); })[0].dest, 'movilizacion');
+});
+prueba('Documentos que no son liquidaciones', 'Un finiquito se distingue de una liquidación y se explica dónde van sus montos', function(){
+  var f=archivo(FINIQUITO);
+  igual([f.p.pareceLiquidacion, f.p.pareceFiniquito], [false, true]);
+  P.verdadero(/^Este archivo parece un finiquito/.test(Lx.avisoArchivo(f)) && /Compara con lo que te ofrecen/.test(Lx.avisoArchivo(f)), Lx.avisoArchivo(f));
+  igual(f.sel.filter(function(d){ return d!=='skip'; }), []);
+  // Una liquidación que solo menciona la palabra «finiquito» sigue siendo liquidación.
+  igual(Lx.parseLiq(texto(LIQ.concat(['Nota: documento valido para finiquito']))).pareceLiquidacion, true);
+});
+prueba('Documentos que no son liquidaciones', 'Si se marca a mano, se puede aplicar; sin nada marcado, no', function(){
+  var f=archivo(OFERTA);
+  igual(Lx.hayMontosMarcados([f]), false);
+  f.sel[0]='sueldoBase';
+  igual(Lx.hayMontosMarcados([f]), true);
+  igual(Lx.planImportacion([f], {}).campos.sueldoBase, '1.200.000');
+  // Una liquidación con todo en «No considerar» tampoco se puede aplicar (antes borraba lo ya escrito).
+  var g=archivo(LIQ); g.sel=g.sel.map(function(){ return 'skip'; });
+  igual(Lx.hayMontosMarcados([g]), false);
+});
+prueba('Documentos que no son liquidaciones', 'Junto a una liquidación, el archivo equivocado no manda aunque se suba al final', function(){
+  var sinPeriodo=LIQ.slice(); sinPeriodo[0]='LIQUIDACION DE SUELDO';
+  var liq=archivo(sinPeriodo, 0), bol=archivo(BOLETA, 1), files=[liq, bol];
+  igual(Lx.sortedFiles(files)[0], liq, 'la liquidación queda como la más reciente');
+  igual(Lx.importTotals(files, false).tot.sueldoBase, 900000);
+  igual(Lx.planImportacion(files, {fecha:true}).campos, Lx.planImportacion([liq], {fecha:true}).campos, 'la boleta no cambia lo que se aplica');
+  igual(Lx.hayMontosMarcados(files), true);
+});
+prueba('Documentos que no son liquidaciones', 'Las liquidaciones de las demás pruebas pasan el control', function(){
+  igual(liqConMonto().pareceLiquidacion, true);
+});
+
 C.pdfs.forEach(function(caso){
   prueba('Lectura de PDFs sintéticos', caso.nombre, function(){
     var esp=E && E.pdfs && E.pdfs[caso.id];
