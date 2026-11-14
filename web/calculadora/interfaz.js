@@ -1,6 +1,6 @@
 /* Finiqa · Interfaz.
  * Lee el formulario, le pide el cálculo al motor (motor/calculo.js) y muestra el resultado.
- * La lectura de liquidaciones usa motor/lector.js (y lector-imagen.js cuando el PDF es una imagen). Aquí no hay reglas de cálculo. */
+ * La lectura de liquidaciones usa motor/lector.js (y lector-imagen.js para fotos y PDFs que son imagen). Aquí no hay reglas de cálculo. */
 (function(){
 'use strict';
 var Mo=window.FiniqaMotor, Lx=window.FiniqaLector;
@@ -281,15 +281,15 @@ function verResultado(){
   mostrarVista(true);
   $('titulo').focus({preventScroll:true}); window.scrollTo(0, 0);
 }
-$('btnSeguir').addEventListener('click', function(){ if(paso<N) irPaso(paso+1, true); else verResultado(); });
+$('btnSeguir').addEventListener('click', function(){ if(leyendo) return; if(paso<N) irPaso(paso+1, true); else verResultado(); });
 $('btnVolver').addEventListener('click', function(){ irPaso(paso-1, true); });
-$('btnBoletaSeguir').addEventListener('click', function(){ if(paso===N) verResultado(); else irPaso(paso, true); });
+$('btnBoletaSeguir').addEventListener('click', function(){ if(leyendo) return; if(paso===N) verResultado(); else irPaso(paso, true); });
 $('btnEditar').addEventListener('click', function(){ irPaso(1, true); });
 $('btnIrComparar').addEventListener('click', function(){ irPaso(COMPARA, true); });
 $('btnManual').addEventListener('click', function(){ manualAbierto=true; render(); $('sueldoBase').focus(); });
 document.addEventListener('click', function(e){
   var b=e.target.closest && e.target.closest('[data-ir]');
-  if(b) irPaso(+b.dataset.ir, b.closest('#resCmp')!=null);
+  if(b && !leyendo) irPaso(+b.dataset.ir, b.closest('#resCmp')!=null);
 });
 var lastR=null;
 
@@ -343,6 +343,7 @@ function applyExample(){
   $('banner').hidden=false; render(); save();
 }
 function clearAll(){
+  if(leyendo) cancelarLectura();
   isExample=false; editedExample=false; manual={uf:false,utm:false,imm:false};
   manualAbierto=false; extrasVisto=false;
   setState(DEFAULTS); $('banner').hidden=true; pasoMax=1; irPaso(1); render(); save();
@@ -394,7 +395,7 @@ if('IntersectionObserver' in window){
   new IntersectionObserver(function(en){ $('mobilebar').classList.toggle('away', en[0].isIntersecting); }, {threshold:0}).observe($('boletaVivo'));
 }
 
-/* ---------- Cargar liquidación de sueldo (PDF, se lee en el navegador) ---------- */
+/* ---------- Cargar liquidación de sueldo (PDF o foto, se lee en el navegador) ---------- */
 // pdf.js (Mozilla, Apache 2.0) viene incluido en la app y se carga solo al subir el primer PDF.
 var PDFJS='../vendor/pdfjs/';
 function loadScript(src){
@@ -421,68 +422,139 @@ function getPdfJs(){
 }
 function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-var imp={files:[], queue:[], errors:[], seq:0, current:null};
+var imp={files:[], queue:[], errors:[], seq:0, current:null, lote:0, total:0, hechos:0, fotos:0};
 function setImpStatus(html, cls){ var s=$('impStatus'); s.className='imp-status'+(cls?' '+cls:''); s.innerHTML=html; }
 function sortedFiles(){ return Lx.sortedFiles(imp.files); }
+function esPdf(f){ return /\.pdf$/i.test(f.name) || f.type==='application/pdf'; }
+function esFoto(f){ return !esPdf(f) && (/^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp|gif|bmp)$/i.test(f.name)); }
+// Nombres que pone el teléfono o la cámara (image.jpg, IMG_1234, PXL_2026…): se muestran como «Foto 1», «Foto 2».
+function nombreGenerico(n){ return /^(?:image|img|imagen|photo|foto|pxl|dsc[nf]?|mvimg|screenshot|captura)?[ _\-]*[\d _\-()]*\.\w+$/i.test(n); }
 function handleFiles(list){
   var all=Array.prototype.slice.call(list||[]);
   if(!all.length) return;
-  imp.files=[]; imp.errors=[];
+  // Un archivo nuevo reemplaza la lectura que esté en curso.
+  if(leyendo && window.FiniqaLectorImagen) FiniqaLectorImagen.cancelar();
+  imp.lote++; imp.files=[]; imp.errors=[]; imp.current=null;
   if(all.length>3) imp.errors.push('Solo se leen 3 archivos a la vez; usamos los 3 primeros.');
-  imp.queue=all.slice(0,3).map(function(f){ return {file:f, pwd:null}; });
+  var nFoto=0;
+  imp.queue=all.slice(0,3).map(function(f){
+    var foto=esFoto(f);
+    return {file:f, pwd:null, foto:foto, nombre: foto && nombreGenerico(f.name) ? 'Foto '+(++nFoto) : f.name};
+  });
+  imp.total=imp.queue.length; imp.hechos=0; imp.fotos=imp.queue.filter(function(q){ return q.foto; }).length;
+  avanceUi.ultimo=0;
   $('impReview').hidden=true; $('pwdWrap').hidden=true;
+  setLeyendo(true);
   processQueue();
 }
-function processQueue(){
-  if(!imp.queue.length){ finishImport(); return; }
-  var q=imp.queue[0], name=q.file.name;
-  if(!/\.pdf$/i.test(name) && q.file.type!=='application/pdf'){
-    imp.errors.push('“'+esc(name)+'” no es un PDF.'); imp.queue.shift(); processQueue(); return;
+
+/* ---------- Lectura a la vista ---------- */
+// Mientras se lee no se puede avanzar al paso siguiente (nada pasa a escondidas mientras la persona sigue).
+var leyendo=false;
+function setLeyendo(on){
+  leyendo=on;
+  ['btnSeguir','btnBoletaSeguir'].forEach(function(id){ $(id).disabled=on; });
+  document.querySelectorAll('#pasosLista .paso-btn').forEach(function(b){ b.disabled=on; });
+  if(!on){
+    $('impAvance').hidden=true; $('impAvanceTxt').textContent='';
+    $('impBarra').setAttribute('aria-valuenow', 0); $('impBarraRelleno').style.width='';
   }
-  setImpStatus('Leyendo “'+esc(name)+'”…','');
+}
+// Un solo porcentaje para toda la tanda: el archivo k de n ocupa de (k−1)/n a k/n. Nunca retrocede.
+var avanceUi={ultimo:0};
+function mostrarAvance(q, a){
+  var pct=Math.floor(100*Math.min(1, (imp.hechos+Math.max(0, Math.min(1, a.avance||0)))/Math.max(1, imp.total)));
+  pct=Math.max(avanceUi.ultimo, pct); avanceUi.ultimo=pct;
+  var que = a.etapa==='revisando' ? 'Revisando la lectura…' : q.foto ? 'Leyendo tu foto…' : 'Leyendo tu PDF'+(a.paginas>1?' (página '+a.pagina+' de '+a.paginas+')':'')+'…';
+  var cual = imp.total>1 ? (imp.fotos===imp.total ? 'Foto ' : 'Archivo ')+(imp.hechos+1)+' de '+imp.total+' · ' : '';
+  var txt=cual+que+' '+pct+' %';
+  var t=$('impAvanceTxt'); if(t.textContent!==txt) t.textContent=txt;
+  $('impBarra').setAttribute('aria-valuenow', pct);
+  $('impBarraRelleno').style.width=pct+'%';
+  if($('impAvance').hidden){ $('impAvance').hidden=false; setImpStatus('',''); }
+}
+function cancelarLectura(){
+  imp.lote++; imp.queue=[]; imp.files=[]; imp.errors=[]; imp.current=null;
+  if(window.FiniqaLectorImagen) FiniqaLectorImagen.cancelar();
+  $('impReview').hidden=true; $('pwdWrap').hidden=true;
+  setImpStatus('',''); setLeyendo(false);
+}
+// ¿Basta con la primera lectura? Sí, si la suma de haberes coincide con el total de la liquidación. Si no coincide,
+// se lee una segunda vez con otro método. Si la foto no parece una liquidación no hay nada que cuadrar: releerla
+// solo duplicaba la espera (medido el 13-11-2026 en un iPhone: 38 s + 39 s con una boleta de exámenes).
+function fotoCuadra(rows){
+  var p=Lx.parseLiq(rows);
+  if(!p.pareceLiquidacion) return true;
+  return !!p.items.length && Lx.chequeo(Lx.nuevoArchivo('', p, 0)).estado==='good';
+}
+var MSJ_FOTO_MALA='No pudimos abrir esta foto. Guárdala como JPG o PNG y súbela de nuevo.';
+var MSJ_FOTO_SIN_LIQ='No logramos reconocer una liquidación en la foto. Prueba con una foto más cerca, con la hoja derecha y buena luz, o ingresa los montos a mano.';
+var MSJ_SIN_LECTOR='No pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.';
+function processQueue(){
+  var lote=imp.lote;
+  if(!imp.queue.length){ finishImport(); return; }
+  var q=imp.queue[0], name=q.nombre, foto=q.foto;
+  // Con varias fotos, cada mensaje dice de cuál es.
+  var de = imp.total>1 ? esc(name)+': ' : '';
+  function siguiente(){ imp.queue.shift(); imp.hechos++; processQueue(); }
+  if(!esPdf(q.file) && !foto){
+    imp.errors.push('“'+esc(name)+'” no es un PDF ni una foto.'); siguiente(); return;
+  }
+  var alAvanzar=function(a){ if(lote===imp.lote) mostrarAvance(q, a); };
+  if(foto) mostrarAvance(q, {etapa:'leyendo', avance:0});
+  else setImpStatus('Leyendo “'+esc(name)+'”…','');
   var imagen=false;
-  q.file.arrayBuffer()
+  (foto ? FiniqaLectorImagen.leerFoto(q.file, alAvanzar, {validar:fotoCuadra}).then(function(rows){ imagen=true; return rows; }, function(e){
+      if(e && e.message==='cancelado') throw e;
+      throw {code:(e && e.message==='imagen') ? 'fotoMala' : 'ocr'};
+    })
+  : q.file.arrayBuffer()
     .then(function(buf){
       return getPdfJs().catch(function(){ throw {code:'lib'}; }).then(function(L){
         return Lx.abrirPdf(L, new Uint8Array(buf), q.pwd);
       });
     })
     .then(function(pdf){
-      // Sin texto: la liquidación viene como imagen y se lee con OCR.
+      // Sin texto: la liquidación viene como imagen y se lee con OCR, con la misma barra que una foto.
       return Lx.pdfRows(pdf).then(function(rows){
-        if(rows.length) return rows;
+        if(rows.length || lote!==imp.lote) return rows;
         imagen=true;
-        return FiniqaLectorImagen.leer(pdf, function(a){
-          if(a.etapa==='preparando') setImpStatus('Leyendo “'+esc(name)+'”: es una imagen. Preparando el lector de imágenes (solo la primera vez descarga unos 5 MB)…','');
-          else setImpStatus('Leyendo la imagen de “'+esc(name)+'”'+(a.paginas>1?' (página '+a.pagina+' de '+a.paginas+')':'')+'… '+Math.round(a.avance*100)+' %','');
-        }).catch(function(){ throw {code:'ocr'}; });
+        mostrarAvance(q, {etapa:'leyendo', avance:0});
+        return FiniqaLectorImagen.leer(pdf, alAvanzar).catch(function(e){
+          if(e && e.message==='cancelado') throw e;
+          throw {code:'ocr'};
+        });
       });
-    })
+    }))
     .then(function(rows){
-      imp.queue.shift();
+      if(lote!==imp.lote) return;
       var p=Lx.parseLiq(rows);
+      if(foto && (!rows.length || (!p.items.length && !p.totalHab))) imp.errors.push(de+MSJ_FOTO_SIN_LIQ);
       // En una imagen, si no aparece nada de una liquidación, lo leído son restos (bordes, manchas): se avisa igual que sin texto.
-      if(!rows.length || (imagen && !p.items.length && !p.totalHab)) imp.errors.push('“'+esc(name)+'” no tiene texto que se pueda leer: es una imagen y no logramos reconocer una liquidación en ella. Descarga la liquidación desde el portal de tu empresa o ingresa los montos a mano.');
+      else if(!rows.length || (imagen && !p.items.length && !p.totalHab)) imp.errors.push('“'+esc(name)+'” no tiene texto que se pueda leer: es una imagen y no logramos reconocer una liquidación en ella. Descarga la liquidación desde el portal de tu empresa o ingresa los montos a mano.');
       else if(!p.items.length && !p.totalHab) imp.errors.push('En “'+esc(name)+'” no encontramos conceptos de una liquidación (sueldo base, gratificación…).');
-      else { var f=Lx.nuevoArchivo(name, p, imp.seq++); f.imagen=imagen; imp.files.push(f); }
-      processQueue();
+      else { var f=Lx.nuevoArchivo(name, p, imp.seq++); f.imagen=imagen; f.foto=foto; imp.files.push(f); }
+      siguiente();
     })
     .catch(function(e){
+      if(lote!==imp.lote || (e && e.message==='cancelado')) return;
       if(e && e.name==='PasswordException'){ askPwd(q, e.code===2); return; }
-      imp.queue.shift();
-      if(e && e.code==='lib'){ imp.queue=[]; setImpStatus('No se pudo cargar el lector de PDF. Recarga la página e inténtalo de nuevo.','bad'); return; }
-      if(e && e.code==='ocr'){ imp.errors.push('“'+esc(name)+'” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.'); processQueue(); return; }
-      imp.errors.push('No se pudo leer “'+esc(name)+'”. Puede estar dañado.');
-      processQueue();
+      if(e && e.code==='lib'){ imp.queue=[]; setLeyendo(false); setImpStatus('No se pudo cargar el lector de PDF. Recarga la página e inténtalo de nuevo.','bad'); return; }
+      if(e && e.code==='fotoMala') imp.errors.push(de+MSJ_FOTO_MALA);
+      else if(e && e.code==='ocr') imp.errors.push(foto ? de+MSJ_SIN_LECTOR : '“'+esc(name)+'” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.');
+      else imp.errors.push('No se pudo leer “'+esc(name)+'”. Puede estar dañado.');
+      siguiente();
     });
 }
 function askPwd(q, wrong){
-  imp.current=q;
+  // Mientras espera la clave no se está leyendo nada: se puede seguir con los pasos.
+  imp.current=q; setLeyendo(false);
   $('pwdLbl').textContent='“'+q.file.name+'” tiene clave'+(wrong?'. La clave ingresada no es correcta.':'');
   $('pwdWrap').hidden=false; setImpStatus('','');
   $('pdfPwd').value=''; $('pdfPwd').focus();
 }
 function finishImport(){
+  setLeyendo(false);
   var errs=imp.errors.length ? '<br>'+imp.errors.join('<br>') : '';
   if(imp.files.length){
     renderReview();
@@ -506,7 +578,8 @@ function renderReview(){
     h+='<div class="imp-file"><h3>'+esc(f.name)+(f.p.periodo?' <small>· '+Lx.periodoTxt(f.p.periodo)+'</small>':'')+' <span class="leida">· leída en tu navegador</span>'+(f===latest&&files.length>1?' <span class="tag">Más reciente</span>':'')+'</h3>';
     var av=Lx.avisoArchivo(f);
     if(av) h+='<div class="imp-check warn" data-aviso="no-liquidacion">'+esc(av)+'</div>';
-    if(f.imagen) h+='<p class="hint">Este PDF es una imagen: reconocimos sus letras automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
+    if(f.foto) h+='<p class="hint">Leímos tu foto automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
+    else if(f.imagen) h+='<p class="hint">Este PDF es una imagen: reconocimos sus letras automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
     if(f.p.items.length){
       h+='<div class="cmp-wrap"><table class="imp"><thead><tr><th>Concepto en tu liquidación</th><th style="text-align:right">Monto</th><th>Usar como</th></tr></thead><tbody>';
       f.p.items.forEach(function(it,i){
@@ -559,17 +632,18 @@ function applyImport(){
   var h=$('h1paso'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'});
 }
 $('pdfInput').addEventListener('change', function(){ var fl=this.files; handleFiles(fl); this.value=''; });
+$('btnImpCancelar').addEventListener('click', function(){ cancelarLectura(); $('pdfInput').focus(); });
 var dz=$('dropZone');
 ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('over'); }); });
 ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('over'); }); });
 dz.addEventListener('drop', function(e){ if(e.dataTransfer) handleFiles(e.dataTransfer.files); });
 $('btnPwd').addEventListener('click', function(){
   var q=imp.current; if(!q) return;
-  q.pwd=$('pdfPwd').value; $('pdfPwd').value=''; $('pwdWrap').hidden=true; imp.current=null; processQueue();
+  q.pwd=$('pdfPwd').value; $('pdfPwd').value=''; $('pwdWrap').hidden=true; imp.current=null; setLeyendo(true); processQueue();
 });
 $('btnPwdSkip').addEventListener('click', function(){
   var q=imp.current; if(!q) return;
-  imp.queue.shift(); imp.errors.push('Omitiste “'+esc(q.file.name)+'”.'); $('pdfPwd').value=''; $('pwdWrap').hidden=true; imp.current=null; processQueue();
+  imp.queue.shift(); imp.hechos++; imp.errors.push('Omitiste “'+esc(q.file.name)+'”.'); $('pdfPwd').value=''; $('pwdWrap').hidden=true; imp.current=null; setLeyendo(true); processQueue();
 });
 $('pdfPwd').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); $('btnPwd').click(); } });
 $('impReview').addEventListener('change', function(e){
