@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finiqa · Medir la lectura de fotos</title>
+<style>
+body{font:15px/1.5 system-ui,sans-serif;margin:16px;color:#14202E}
+h1{font-size:19px;margin:0 0 6px}
+button,label.b{display:inline-block;font:600 15px system-ui;padding:10px 14px;border-radius:10px;border:1.5px solid #C5D0DC;background:#fff;margin:4px 6px 4px 0}
+pre{white-space:pre-wrap;background:#EFF2F6;border-radius:10px;padding:12px;font:12px/1.55 ui-monospace,Menlo,monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+</head>
+<body>
+<h1>Medir la lectura de fotos</h1>
+<p>Página interna (no se publica). Lee una foto inventada o una tuya y muestra cuánto toma cada etapa en este aparato.
+   Opciones en la dirección: <code>?auto=1</code> lee la foto de prueba 3 veces al abrir; <code>?lado=1600</code> cambia el tamaño de lectura; <code>?lineas=0</code> no borra las líneas.</p>
+<p><button id="bPrueba">Leer la foto de prueba (3 veces)</button>
+   <label class="b" for="f">Tomar o elegir una foto</label><input class="sr" type="file" id="f" accept="image/*"></p>
+<pre id="out">Listo para medir.</pre>
+<script src="../web/motor/calculo.js"></script>
+<script src="../web/motor/lector.js"></script>
+<script src="../web/motor/ocr.js"></script>
+<script src="../web/calculadora/lector-imagen.js"></script>
+<script>
+(function(){
+var Lx=window.FiniqaLector, out=document.getElementById('out'), q=location.search;
+var m=q.match(/[?&]lado=(\d{3,4})/), pm=q.match(/[?&]psm=(\d{1,2})/), OPC={lado:m?+m[1]:null, conLineas:/[?&]lineas=0/.test(q), psm:pm?+pm[1]:null, sinRotar:/[?&]rotar=0/.test(q)};
+function s(ms){ return ms==null ? '—' : (ms/1000).toFixed(1).replace('.',',')+' s'; }
+function log(t){ out.textContent+='\n'+t; }
+function cuadra(rows){ var p=Lx.parseLiq(rows); return !!p.items.length && Lx.chequeo(Lx.nuevoArchivo('', p, 0)).estado==='good'; }
+function leer(file, n){
+  return window.FiniqaLectorImagen.leerFoto(file, null, {validar:cuadra, lado:OPC.lado, conLineas:OPC.conLineas, psm:OPC.psm, sinRotar:OPC.sinRotar}).then(function(rows){
+    var T=rows.tiempos, p=Lx.parseLiq(rows);
+    log('Lectura '+n+': total '+s(T.total)+' · lectura '+s(T.lectura1)+(T.lectura2!=null?' + 2.ª '+s(T.lectura2):'')+
+        ' · preparar foto '+s(T.abrir+T.escalar+T.lineas+T.png)+' (abrir '+s(T.abrir)+', tamaño '+s(T.escalar)+', líneas '+s(T.lineas)+', guardar '+s(T.png)+')'+
+        ' · lector '+(T.lectorYaListo?'ya listo':'tardó '+s(T.lector))+' · '+T.original+' → '+T.leida+' · '+(T.simd?'con':'sin')+' SIMD · '+T.palabras+' palabras'+
+        ' · conceptos '+p.items.length+', '+(cuadra(rows)?'cuadra con el total':'NO cuadra con el total')+(p.pareceLiquidacion?'':' · no parece una liquidación'));
+  }, function(e){ log('Lectura '+n+': ERROR '+((e && e.message) || e)); });
+}
+function varias(file, veces){
+  out.textContent='Aparato: '+navigator.userAgent.replace(/^Mozilla\/5\.0 /,'').slice(0,110)+'\nOpciones: lado '+(OPC.lado||window.FiniqaLectorImagen.LADO_FOTO)+' px, '+(OPC.conLineas?'sin borrar líneas':'borrando líneas')+'\nLeyendo…';
+  var c=Promise.resolve();
+  for(var i=1;i<=veces;i++) c=c.then(leer.bind(null, file, i));
+  return c.then(function(){ log('Fin.'); document.title='MEDIDO '+out.textContent.split('\n').filter(function(l){ return /^Lectura/.test(l); }).map(function(l){ return l.replace(/ · preparar foto.*?\) · /,' · ').slice(0,150); }).join(' || '); });
+}
+function fotoDePrueba(){
+  return fetch('fotos-sinteticas/liquidacion-tabla-real.jpg', {cache:'no-store'}).then(function(r){ return r.blob(); }).then(function(b){ return new File([b], 'image.jpg', {type:'image/jpeg'}); });
+}
+document.getElementById('bPrueba').addEventListener('click', function(){ fotoDePrueba().then(function(f){ return varias(f, 3); }); });
+document.getElementById('f').addEventListener('change', function(){ var f=this.files && this.files[0]; this.value=''; if(f) varias(f, 2); });
+if(/[?&]auto=1/.test(q)) fotoDePrueba().then(function(f){ return varias(f, 3); });
+})();
+</script>
+</body>
+</html>

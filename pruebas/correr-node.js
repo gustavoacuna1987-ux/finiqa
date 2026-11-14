@@ -18,6 +18,7 @@ globalThis.FiniqaEsperados = require('./esperados.js');
 globalThis.FiniqaCorrecciones = require('./correcciones.js');
 globalThis.FiniqaResultado = require('./resultado.js');
 globalThis.FiniqaIndicadores = require('../herramientas/actualizar-indicadores.js');
+globalThis.FiniqaOcrGrabado = require('./fotos-sinteticas/ocr-grabado.js');
 globalThis.FiniqaEntorno = {
   pdfjs: pdfjsLib,
   leerPdf: function(n){ return Promise.resolve(new Uint8Array(fs.readFileSync(path.join(__dirname, 'pdfs-sinteticos', n)))); },
@@ -26,6 +27,7 @@ globalThis.FiniqaEntorno = {
 require('./pruebas-motor.js');
 require('./pruebas-lector.js');
 require('./pruebas-ocr.js');
+require('./pruebas-foto.js');
 require('./pruebas-app.js');
 require('./pruebas-indicadores.js');
 
