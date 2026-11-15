@@ -87,13 +87,20 @@
               <div class="drop" id="dropZone">
                 <svg class="drop-icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M12 17v-5M9.5 14.5L12 12l2.5 2.5"/></svg>
                 <div class="drop-texto">
-                  <p class="drop-t" id="hImp">Sube tu liquidación (PDF o foto)</p>
-                  <p class="hint">Se lee en tu navegador: no se envía ni se guarda. Si es una foto, que salga la hoja completa, derecha y con buena luz. Si tienes comisiones, sube las de los últimos 3 meses.</p>
+                  <p class="drop-t" id="hImp">Sube tu liquidación en PDF</p>
+                  <p class="hint">Se lee en tu navegador: no se envía ni se guarda. Lo mejor es el PDF que entrega tu empresa o su portal de remuneraciones. ¿La tienes en papel? Escanéala con tu teléfono y sube el PDF. Si tienes comisiones, sube las de los últimos 3 meses.</p>
                 </div>
-                <label class="boton primario" for="pdfInput">Elegir PDF o foto</label>
+                <label class="boton primario" for="pdfInput">Elegir archivo</label>
                 <!-- Sin «capture»: en el iPhone, el propio teléfono ofrece fototeca, cámara o archivos. -->
                 <input type="file" id="pdfInput" class="sr" accept="application/pdf,.pdf,image/*" multiple>
               </div>
+              <!-- El escáner del teléfono endereza y aplana la hoja mucho mejor que una foto suelta: es el camino recomendado para el papel. -->
+              <details class="more" id="ayudaEscanear"><summary>¿Cómo la escaneo con el teléfono?</summary><div>
+                <p><strong>iPhone:</strong> abre la app Archivos, toca el botón «…» de arriba y elige «Escanear documentos». Toma la foto, ajusta las esquinas si hace falta y toca «Guardar».</p>
+                <p><strong>Android:</strong> abre la app Google Drive, toca «+» y elige «Escanear». Toma la foto y toca «Guardar».</p>
+                <p>Después toca «Elegir archivo» aquí y elige ese PDF.</p>
+              </div></details>
+              <p class="hint" id="fotoBeta">También puedes subir una foto (en prueba): hoja plana y completa, con buena luz y sin sombra. Con el escáner del teléfono el resultado es más seguro.</p>
               <div id="pwdWrap" class="pwd" hidden>
                 <label class="label" for="pdfPwd" id="pwdLbl">Este PDF tiene clave</label>
                 <div class="pwd-row"><input type="password" id="pdfPwd" autocomplete="off"><button type="button" id="btnPwd" class="boton primario">Abrir</button><button type="button" id="btnPwdSkip" class="boton">Omitir</button></div>
