@@ -488,7 +488,7 @@ function fotoCuadra(rows){
   return !!p.items.length && Lx.chequeo(Lx.nuevoArchivo('', p, 0)).estado==='good';
 }
 var MSJ_FOTO_MALA='No pudimos abrir esta foto. Guárdala como JPG o PNG y súbela de nuevo.';
-var MSJ_FOTO_SIN_LIQ='No logramos reconocer una liquidación en la foto. Prueba con una foto más cerca, con la hoja derecha y buena luz, o ingresa los montos a mano.';
+var MSJ_FOTO_SIN_LIQ='No logramos reconocer una liquidación en la foto. Escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»), o ingresa los montos a mano.';
 var MSJ_SIN_LECTOR='No pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.';
 function processQueue(){
   var lote=imp.lote;
@@ -578,7 +578,9 @@ function renderReview(){
     h+='<div class="imp-file"><h3>'+esc(f.name)+(f.p.periodo?' <small>· '+Lx.periodoTxt(f.p.periodo)+'</small>':'')+' <span class="leida">· leída en tu navegador</span>'+(f===latest&&files.length>1?' <span class="tag">Más reciente</span>':'')+'</h3>';
     var av=Lx.avisoArchivo(f);
     if(av) h+='<div class="imp-check warn" data-aviso="no-liquidacion">'+esc(av)+'</div>';
-    if(f.foto) h+='<p class="hint">Leímos tu foto automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
+    // Si la foto no cuadra con el total de haberes, se sugiere el escáner del teléfono (lee mucho mejor que una foto suelta).
+    if(f.foto) h+=Lx.chequeo(f).estado==='good' ? '<p class="hint">Leímos tu foto automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>'
+      : '<p class="hint" data-aviso="foto-escaner">Leímos tu foto, pero no pudimos comprobar que los montos sumen el total de haberes: puede haber errores. Revísalos o, mejor, escanéala con tu teléfono y súbela como PDF.</p>';
     else if(f.imagen) h+='<p class="hint">Este PDF es una imagen: reconocimos sus letras automáticamente. Compara cada monto con tu liquidación antes de aplicarlos.</p>';
     if(f.p.items.length){
       h+='<div class="cmp-wrap"><table class="imp"><thead><tr><th>Concepto en tu liquidación</th><th style="text-align:right">Monto</th><th>Usar como</th></tr></thead><tbody>';

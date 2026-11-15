@@ -46,7 +46,17 @@ prueba(GRUPO, 'El control de carga acepta PDF y fotos, sin cámara ni botón apa
     verdadero(/\bmultiple\b/.test(inp), 'el control debe aceptar varios archivos');
     verdadero(!/capture=/.test(h), 'la página no debe tener «capture» (la cámara está en pausa)');
     verdadero(!/btnFoto|fotoInput|fotoMedicion|Tomar una foto|Versión de prueba/.test(h), 'quedan restos de la cámara en la página');
-    verdadero(/Sube tu liquidación \(PDF o foto\)/.test(h), 'falta el texto «Sube tu liquidación (PDF o foto)»');
+    verdadero(/Sube tu liquidación en PDF/.test(h), 'falta el texto «Sube tu liquidación en PDF»');
+    verdadero(/<label class="boton primario" for="pdfInput">Elegir archivo<\/label>/.test(h), 'el botón debe decir «Elegir archivo»');
+  });
+});
+prueba(GRUPO, 'La carga guía al PDF y al escáner del teléfono; la foto queda «en prueba»', function(){
+  return leer('web/calculadora/index.html').then(function(h){
+    verdadero(/Lo mejor es el PDF que entrega tu empresa o su portal de remuneraciones\. ¿La tienes en papel\? Escanéala con tu teléfono y sube el PDF\./.test(h), 'falta la recomendación del PDF y del escáner');
+    var ayuda=(h.match(/<details class="more" id="ayudaEscanear">[\s\S]*?<\/details>/)||[''])[0];
+    verdadero(/¿Cómo la escaneo con el teléfono\?/.test(ayuda), 'falta «¿Cómo la escaneo con el teléfono?»');
+    verdadero(/Archivos[\s\S]*Escanear documentos/.test(ayuda) && /Google Drive[\s\S]*Escanear/.test(ayuda), 'faltan los pasos para iPhone y Android');
+    verdadero(/id="fotoBeta">También puedes subir una foto \(en prueba\)/.test(h), 'falta el aviso de la foto en prueba');
   });
 });
 prueba(GRUPO, 'La barra de avance es accesible y tiene Cancelar y el aviso de privacidad', function(){
@@ -256,7 +266,7 @@ prueba(GRUPO, 'Calculadora: una foto que no es una liquidación lo dice y sugier
     return conCalculadora(function(win, $){
       subir(win, $, [{datos:b, nombre:'compras.png', tipo:'image/png'}]);
       return hasta(function(){ return /bad/.test($('impStatus').className); }, 60000, 'avisar que no es una liquidación').then(function(){
-        igual($('impStatus').textContent, 'No logramos reconocer una liquidación en la foto. Prueba con una foto más cerca, con la hoja derecha y buena luz, o ingresa los montos a mano.');
+        igual($('impStatus').textContent, 'No logramos reconocer una liquidación en la foto. Escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»), o ingresa los montos a mano.');
       });
     });
   });
