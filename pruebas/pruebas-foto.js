@@ -37,6 +37,46 @@ fotos.forEach(function(id){
   });
 });
 
+/* ---------- ¿Basta con la primera lectura de una foto? ---------- */
+function filaTexto(t){ return {text:t, page:0, tokens:t.split(' ').map(function(w, i){ return {t:w, x:i*100}; })}; }
+prueba(GRUPO, 'Primera lectura: una liquidación que cuadra basta; si no cuadra, se relee', function(){
+  return filasPdf('liquidacion-simple.pdf').then(function(rows){
+    igual(Lx.bastaPrimeraLectura(rows), true, 'liquidación que cuadra');
+    var sinSueldo=rows.filter(function(r){ return !/sueldo base/i.test(r.text); });
+    verdadero(sinSueldo.length<rows.length, 'la liquidación de prueba debe tener «Sueldo base»');
+    igual(Lx.bastaPrimeraLectura(sinSueldo), false, 'liquidación a la que le falta una línea (no cuadra)');
+  });
+});
+function miles(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+prueba(GRUPO, 'Primera lectura: sin total de haberes se compara con el total imponible; sin ningún total, basta', function(){
+  return filasPdf('liquidacion-simple.pdf').then(function(rows){
+    var i=rows.map(function(r){ return /total haberes/i.test(r.text); }).indexOf(true);
+    verdadero(i>=0, 'la liquidación de prueba debe tener «Total haberes»');
+    var sinTotal=rows.slice(0, i).concat(rows.slice(i+1));
+    igual(Lx.parseLiq(sinTotal).totalHab, null, 'sin la fila del total');
+    igual(Lx.bastaPrimeraLectura(sinTotal), true, 'sin ningún total no hay con qué comparar: releer solo alarga la espera');
+    // La misma fila convertida en «Total imponible»: con el monto correcto basta; con otro, se relee.
+    var imponible=Lx.sumaImponible(Lx.nuevoArchivo('', Lx.parseLiq(rows), 0));
+    function conImponible(monto){
+      var fila=JSON.parse(JSON.stringify(rows[i]).replace(/haberes/gi, 'imponible').replace(/1\.642\.116/g, miles(monto)));
+      return rows.slice(0, i).concat([fila], rows.slice(i+1));
+    }
+    igual(Lx.parseLiq(conImponible(imponible)).totalImp, imponible, 'debe leer el total imponible');
+    igual(Lx.bastaPrimeraLectura(conImponible(imponible)), true, 'lo imponible cuadra con el total imponible');
+    igual(Lx.bastaPrimeraLectura(conImponible(imponible+100000)), false, 'lo imponible no cuadra: se relee');
+  });
+});
+prueba(GRUPO, 'Primera lectura: sin palabras de liquidación basta; con algunas (lectura a medias) se relee', function(){
+  igual(Lx.bastaPrimeraLectura([filaTexto('Boleta examen de sangre 12.500'), filaTexto('Total 12.500')]), true, 'otro documento: releerlo solo alarga la espera');
+  igual(Lx.bastaPrimeraLectura([]), true, 'nada leído');
+  var aMedias=[filaTexto('Sueldo b4se 600.000'), filaTexto('AFP Modelo 63.000'), filaTexto('x7 ;; 1.2.0')];
+  igual(Lx.parseLiq(aMedias).pareceLiquidacion, false, 'la lectura a medias no alcanza a parecer liquidación');
+  igual(Lx.bastaPrimeraLectura(aMedias), false, 'lectura a medias de una liquidación: debe releerse');
+  var finiquito=[filaTexto('Finiquito de contrato de trabajo'), filaTexto('Indemnización años de servicio 1.200.000'), filaTexto('AFP Modelo Salud Fonasa'), filaTexto('Líquido a pagar 1.200.000')];
+  igual(Lx.parseLiq(finiquito).pareceFiniquito, true, 'el ejemplo debe parecer un finiquito');
+  igual(Lx.bastaPrimeraLectura(finiquito), true, 'un finiquito se leyó bien: no se relee');
+});
+
 /* ---------- La página: un solo control, sin cámara, con barra de avance ---------- */
 function leer(r){ return root.FiniqaEntorno.leerTexto(r); }
 prueba(GRUPO, 'El control de carga acepta PDF y fotos, sin cámara ni botón aparte', function(){
@@ -64,7 +104,8 @@ prueba(GRUPO, 'La barra de avance es accesible y tiene Cancelar y el aviso de pr
     var caja=(h.match(/<div id="impAvance"[\s\S]*?<\/button>\s*<\/div>/)||[''])[0];
     verdadero(caja, 'falta la caja de avance #impAvance');
     verdadero(/role="progressbar"[^>]*aria-valuemin="0"[^>]*aria-valuemax="100"[^>]*aria-valuenow="0"/.test(caja), 'la barra debe ser role="progressbar" con aria-valuenow');
-    verdadero(/id="impAvanceTxt"[^>]*aria-live="polite"/.test(caja), 'el texto del avance debe estar en una zona aria-live="polite"');
+    verdadero(/id="impAvanceVoz" class="sr" aria-live="polite"/.test(caja), 'el avance para lectores de pantalla debe estar en una zona aria-live="polite" oculta');
+    verdadero(!/id="impAvanceTxt"[^>]*aria-live/.test(caja), 'el texto con el porcentaje no debe anunciarse a cada cambio');
     verdadero(/Se lee en tu teléfono o computador\. No se envía a ninguna parte\./.test(caja), 'falta el aviso de privacidad bajo la barra');
     verdadero(/<button type="button" id="btnImpCancelar" class="boton">Cancelar<\/button>/.test(caja), 'falta el botón Cancelar');
   });
@@ -143,6 +184,29 @@ prueba(GRUPO, 'Con dos lecturas, dice «Revisando», nunca retrocede y termina e
     verdadero(antes!=null && antes>=0.7 && antes<0.8, 'la segunda lectura debe partir cerca del 75 %: '+antes);
   });
 });
+prueba(GRUPO, 'Con dos lecturas, gana la que parece liquidación aunque la otra tenga más montos', function(){
+  var O=root.FiniqaOcr, original=O.filasDesdeTsv, n=0, ruido=[];
+  // Primera lectura: puro ruido con muchos montos y ninguna palabra de liquidación. La segunda es la real.
+  for(var i=0;i<60;i++) ruido.push(filaTexto('1.000 2.000 3.000'));
+  O.filasDesdeTsv=function(){ n++; return n===1 ? ruido : original.apply(O, arguments); };
+  return leerFoto('liquidacion-simple-real.jpg', {validar:function(){ return false; }}).then(function(rows){
+    O.filasDesdeTsv=original;
+    igual(n, 2, 'lecturas');
+    igual(Lx.parseLiq(rows).pareceLiquidacion, true, 'se quedó con el ruido');
+  }, function(e){ O.filasDesdeTsv=original; throw e; });
+});
+prueba(GRUPO, 'Con dos lecturas, los montos se cuentan con la misma limpieza del lector («1.000.-»)', function(){
+  var O=root.FiniqaOcr, original=O.filasDesdeTsv, n=0;
+  // Ninguna de las dos parece liquidación: gana la de más montos. La primera trae 10 montos escritos «1.000.-».
+  var primera=[filaTexto('1.000.- 2.000.- 3.000.- 4.000.- 5.000.-'), filaTexto('6.000.- 7.000.- 8.000.- 9.000.- 10.000.-')];
+  var segunda=[filaTexto('1.000 2.000 3.000')];
+  O.filasDesdeTsv=function(){ n++; return n===1 ? primera : segunda; };
+  return leerFoto('liquidacion-simple-real.jpg', {validar:function(){ return false; }}).then(function(rows){
+    O.filasDesdeTsv=original;
+    igual(n, 2, 'lecturas');
+    verdadero(rows===primera, 'debía quedarse con la lectura de 10 montos');
+  }, function(e){ O.filasDesdeTsv=original; throw e; });
+});
 prueba(GRUPO, 'Cancelar detiene la lectura y la deja lista para otra', function(){
   var L=root.FiniqaLectorImagen, avisos=0;
   var p=leerFoto('liquidacion-tabla-real.jpg', {validar:cuadra}, function(){ avisos++; });
@@ -150,10 +214,65 @@ prueba(GRUPO, 'Cancelar detiene la lectura y la deja lista para otra', function(
     L.cancelar();
     return p.then(function(){ throw new Error('la lectura no se canceló'); }, function(e){ igual(e && e.message, 'cancelado'); });
   }).then(function(){
-    igual(L.estado(), {lectorCreado:false, leyendo:false}, 'después de cancelar');
+    igual(L.estado(), {lectorCreado:false, leyendo:false, lienzos:0}, 'después de cancelar');
     // La siguiente lectura funciona (con un lector nuevo).
     return leerFoto('liquidacion-simple-real.jpg', {validar:cuadra});
   }).then(function(rows){ verdadero(rows.length>0, 'la lectura después de cancelar no leyó nada'); });
+});
+prueba(GRUPO, 'Al terminar no quedan imágenes de trabajo, y Cancelar sin lectura en curso deja el lector listo', function(){
+  var L=root.FiniqaLectorImagen;
+  return leerFoto('liquidacion-simple-real.jpg', {validar:cuadra}).then(function(){
+    igual(L.estado(), {lectorCreado:true, leyendo:false, lienzos:0}, 'al terminar de leer');
+    L.cancelar();
+    igual(L.estado(), {lectorCreado:true, leyendo:false, lienzos:0}, 'cancelar sin lectura en curso no debe cerrar el lector');
+  });
+});
+prueba(GRUPO, 'Una carga vieja del lector que falla tarde no borra el lector nuevo', function(){
+  var L=root.FiniqaLectorImagen, T=root.Tesseract, original=T.createWorker, llamadas=0;
+  function archivo(b){ return new File([b], 'image.jpg', {type:'image/jpeg'}); }
+  function cancelada(p){ return p.then(function(){ throw new Error('la lectura no se canceló'); }, function(e){ igual(e && e.message, 'cancelado'); }); }
+  return blobFoto('liquidacion-simple-real.jpg').then(function(b){
+    // Parte sin lector: cancelar una lectura en curso lo cierra.
+    var p0=L.leerFoto(archivo(b), null, {validar:cuadra}); L.cancelar();
+    // La primera carga falla tarde (como sin internet); las siguientes son normales.
+    T.createWorker=function(){
+      llamadas++;
+      if(llamadas===1) return new Promise(function(res, rej){ setTimeout(function(){ rej(new Error('red')); }, 500); });
+      return original.apply(T, arguments);
+    };
+    var p1=L.leerFoto(archivo(b), null, {validar:cuadra}); L.cancelar();
+    var p2=L.leerFoto(archivo(b), null, {validar:cuadra});
+    return Promise.all([cancelada(p0), cancelada(p1), p2, espera(1000)]);
+  }).then(function(r){
+    T.createWorker=original;
+    verdadero(r[2].length>0, 'la lectura con el lector nuevo no leyó nada');
+    igual(llamadas, 2, 'cargas del lector');
+    igual(L.estado().lectorCreado, true, 'la carga vieja que falló borró el lector nuevo');
+  }, function(e){ T.createWorker=original; throw e; });
+});
+prueba(GRUPO, 'Si no se puede cargar el lector, el error dice «lector»', function(){
+  var L=root.FiniqaLectorImagen, T=root.Tesseract, original=T.createWorker;
+  return blobFoto('liquidacion-simple-real.jpg').then(function(b){
+    // Parte sin lector (cancelar una lectura en curso lo cierra) y la carga siguiente falla, como sin internet.
+    L.leerFoto(new File([b], 'image.jpg', {type:'image/jpeg'}), null, {}).catch(function(){}); L.cancelar();
+    T.createWorker=function(){ return Promise.reject(new Error('red')); };
+    return L.leerFoto(new File([b], 'image.jpg', {type:'image/jpeg'}), null, {});
+  }).then(function(){ T.createWorker=original; throw new Error('la lectura no falló'); }, function(e){
+    T.createWorker=original;
+    igual(e && e.message, 'lector');
+    igual(L.estado(), {lectorCreado:false, leyendo:false, lienzos:0}, 'después de fallar');
+  });
+});
+prueba(GRUPO, 'Si el lector cargó pero la lectura falla, el error dice «lectura» (foto y PDF que es imagen)', function(){
+  var L=root.FiniqaLectorImagen, O=root.FiniqaOcr, original=O.filasDesdeTsv, Env=root.FiniqaEntorno;
+  O.filasDesdeTsv=function(){ throw new RangeError('sin memoria'); };
+  function falla(p, que){ return p.then(function(){ throw new Error(que+': la lectura no falló'); }, function(e){ igual(e && e.message, 'lectura', que); }); }
+  return falla(leerFoto('liquidacion-simple-real.jpg', {}), 'foto').then(function(){
+    return Env.leerPdf('liquidacion-imagen.pdf').then(function(d){ return Lx.abrirPdf(Env.pdfjs, d); }).then(function(pdf){ return falla(L.leer(pdf), 'PDF imagen'); });
+  }).then(function(){
+    O.filasDesdeTsv=original;
+    igual(L.estado(), {lectorCreado:true, leyendo:false, lienzos:0}, 'después de fallar, el lector sigue listo');
+  }, function(e){ O.filasDesdeTsv=original; throw e; });
 });
 
 /* ---------- La calculadora mientras lee (abierta de forma invisible) ---------- */
@@ -201,10 +320,11 @@ prueba(GRUPO, 'Calculadora: el lector de imágenes no se carga antes de elegir u
 prueba(GRUPO, 'Calculadora: lee una foto a la vista, bloquea «Continuar» y muestra «Foto 1»', function(){
   return blobFoto('liquidacion-simple-real.jpg').then(function(b){
     return conCalculadora(function(win, $){
-      var vals=[], textos=[], obs=new win.MutationObserver(function(){
+      var vals=[], textos=[], voces=[], obs=new win.MutationObserver(function(){
         if($('impAvance').hidden) return; // al terminar, la barra se oculta y vuelve a 0 para la próxima vez
         var v=+$('impBarra').getAttribute('aria-valuenow'); if(vals[vals.length-1]!==v) vals.push(v);
         var t=$('impAvanceTxt').textContent; if(t && textos[textos.length-1]!==t) textos.push(t);
+        var z=$('impAvanceVoz').textContent; if(z && voces[voces.length-1]!==z) voces.push(z);
       });
       obs.observe($('impAvance'), {attributes:true, subtree:true, childList:true, characterData:true});
       subir(win, $, [{datos:b, nombre:'image.jpg', tipo:'image/jpeg'}]);
@@ -216,6 +336,8 @@ prueba(GRUPO, 'Calculadora: lee una foto a la vista, bloquea «Continuar» y mue
         sinRetroceder(vals, 'barra de la calculadora');
         igual(vals[vals.length-1], 100, 'la barra debe terminar en 100');
         verdadero(textos.some(function(t){ return /^Leyendo tu foto… \d+ %$/.test(t); }), 'el texto debe decir «Leyendo tu foto… N %»: '+textos.join(' | '));
+        verdadero(voces.length>=1 && voces.length<=2 && voces.every(function(z){ return /^(Leyendo tu foto|Revisando la lectura)…$/.test(z); }), 'el lector de pantalla debe oír solo las etapas, sin porcentajes: '+voces.join(' | '));
+        verdadero(textos.length>voces.length, 'la barra debe avanzar más veces de las que se anuncia');
         verdadero($('impAvance').hidden, 'la barra debe ocultarse al terminar');
         verdadero(pasosLibres($, win), '«Continuar» debe volver al terminar');
         var h3=$('impReview').querySelector('.imp-file h3').firstChild.textContent;
@@ -247,6 +369,26 @@ prueba(GRUPO, 'Calculadora: Cancelar deja la cola vacía y la pantalla como ante
     });
   });
 });
+prueba(GRUPO, 'Calculadora: una foto y un PDF con texto juntos usan una sola barra (nunca barra y texto a la vez)', function(){
+  return Promise.all([blobFoto('liquidacion-simple-real.jpg'), fetch('pdfs-sinteticos/liquidacion-simple.pdf').then(function(r){ return r.blob(); })]).then(function(b){
+    return conCalculadora(function(win, $){
+      var choques=[], textos=[], obs=new win.MutationObserver(function(){
+        var barra=!$('impAvance').hidden, estado=$('impStatus').textContent, t=$('impAvanceTxt').textContent;
+        if(barra && estado) choques.push(t+' | '+estado);
+        if(barra && t && textos[textos.length-1]!==t) textos.push(t);
+      });
+      obs.observe($('importCard'), {attributes:true, subtree:true, childList:true, characterData:true});
+      subir(win, $, [{datos:b[0], nombre:'image.jpg', tipo:'image/jpeg'}, {datos:b[1], nombre:'liquidacion-simple.pdf', tipo:'application/pdf'}]);
+      return hasta(function(){ return !$('impReview').hidden || /bad/.test($('impStatus').className); }, 60000, 'terminar de leer los dos archivos').then(function(){
+        obs.disconnect();
+        verdadero(!$('impReview').hidden, 'no mostró la revisión: '+$('impStatus').textContent);
+        igual(choques, [], 'la barra y el texto de estado se vieron a la vez');
+        verdadero(textos.some(function(t){ return /^Archivo 2 de 2 · Leyendo tu PDF… \d+ %$/.test(t); }), 'el PDF debe seguir en la barra: '+textos.join(' | '));
+        verdadero($('impAvance').hidden && pasosLibres($, win), 'la barra debe ocultarse al terminar');
+      });
+    });
+  });
+});
 prueba(GRUPO, 'Calculadora: una imagen que no se puede abrir da un mensaje claro y no bota la página', function(){
   return conCalculadora(function(win, $){
     subir(win, $, [{datos:'esto no es una foto', nombre:'liquidacion.heic', tipo:'image/heic'}]);
@@ -255,6 +397,26 @@ prueba(GRUPO, 'Calculadora: una imagen que no se puede abrir da un mensaje claro
       verdadero($('impAvance').hidden && pasosLibres($, win), 'la pantalla debe quedar usable');
       $('btnManual').click();
       verdadero(!$('sueldoManual').hidden, 'la página dejó de responder');
+    });
+  });
+});
+[['lector', 'image/jpeg', 'foto.jpg', 'leerFoto', 'No pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.'],
+ ['lectura', 'image/jpeg', 'foto.jpg', 'leerFoto', 'No pudimos terminar de leer esta foto. Inténtalo de nuevo o, mejor, escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»). También puedes ingresar los montos a mano.'],
+ ['lector', 'application/pdf', 'liquidacion-imagen.pdf', 'leer', '“liquidacion-imagen.pdf” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.'],
+ ['lectura', 'application/pdf', 'liquidacion-imagen.pdf', 'leer', '“liquidacion-imagen.pdf” es una imagen y no pudimos terminar de leerla. Inténtalo de nuevo, descarga la liquidación desde el portal de tu empresa o ingresa los montos a mano.']
+].forEach(function(c){
+  prueba(GRUPO, 'Calculadora: error «'+c[0]+'» al leer '+(c[3]==='leer' ? 'un PDF que es imagen' : 'una foto')+' da el mensaje que corresponde', function(){
+    var datos=c[3]==='leer' ? fetch('pdfs-sinteticos/liquidacion-imagen.pdf').then(function(r){ return r.blob(); }) : blobFoto('liquidacion-simple-real.jpg');
+    return datos.then(function(b){
+      return conCalculadora(function(win, $){
+        // Se simula la falla sin leer de verdad: solo importa qué mensaje ve la persona.
+        win.FiniqaLectorImagen[c[3]]=function(){ return Promise.reject(new Error(c[0])); };
+        subir(win, $, [{datos:b, nombre:c[2], tipo:c[1]}]);
+        return hasta(function(){ return /bad/.test($('impStatus').className); }, 30000, 'avisar el error').then(function(){
+          igual($('impStatus').textContent, c[4]);
+          verdadero($('impAvance').hidden && pasosLibres($, win), 'la pantalla debe quedar usable');
+        });
+      });
     });
   });
 });

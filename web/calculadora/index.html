@@ -108,7 +108,9 @@
               </div>
               <!-- Lectura a la vista: barra de avance mientras se lee una foto o un PDF que es imagen. Nada se lee a escondidas. -->
               <div id="impAvance" class="imp-avance" hidden>
-                <p id="impAvanceTxt" class="imp-avance-txt" aria-live="polite" aria-atomic="true"></p>
+                <p id="impAvanceTxt" class="imp-avance-txt"></p>
+                <!-- Para lectores de pantalla: solo se anuncia cuando cambia la etapa, no cada porcentaje (la barra ya lo informa). -->
+                <p id="impAvanceVoz" class="sr" aria-live="polite" aria-atomic="true"></p>
                 <div id="impBarra" class="imp-barra" role="progressbar" aria-labelledby="impAvanceTxt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="impBarraRelleno"></span></div>
                 <p class="hint">Se lee en tu teléfono o computador. No se envía a ninguna parte.</p>
                 <button type="button" id="btnImpCancelar" class="boton">Cancelar</button>

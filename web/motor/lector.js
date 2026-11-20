@@ -249,9 +249,13 @@ function sortedFiles(files){
 function fileSum(f){
   var s=0; f.p.items.forEach(function(it,i){ if(f.sel[i]!=='skip' || it.known) s+=it.amount; }); return s;
 }
+// Suma de lo marcado como imponible (sueldo base, bonos fijos, gratificación y variables).
+function sumaImponible(f){
+  var s=0; f.sel.forEach(function(d,i){ if(/^(sueldoBase|bonosFijos|gratMonto|var)$/.test(d)) s+=f.p.items[i].amount; }); return s;
+}
 function fileIssues(f){
-  var out=[], nSB=0, impon=0;
-  f.sel.forEach(function(d,i){ if(d==='sueldoBase') nSB++; if(/^(sueldoBase|bonosFijos|gratMonto|var)$/.test(d)) impon+=f.p.items[i].amount; });
+  var out=[], nSB=0, impon=sumaImponible(f);
+  f.sel.forEach(function(d){ if(d==='sueldoBase') nSB++; });
   if(nSB>1) out.push('Marcaste más de una línea como “Sueldo base”. Deja solo una.');
   var s=fileSum(f);
   if(f.p.totalHab && s>f.p.totalHab+2) out.push('Lo marcado suma '+money(s)+', más que el total de haberes de tu liquidación ('+money(f.p.totalHab)+'). Probablemente hay un concepto repetido: márcalo como “No considerar”.');
@@ -269,6 +273,25 @@ function chequeo(f){
     return {estado:'warn', txt:'Leímos '+money(s)+' en haberes y tu liquidación indica '+money(t)+' en total (diferencia '+money(Math.abs(d))+'). Puede que algún concepto no se haya leído o que esté marcado como “No considerar”: compáralo con tu liquidación.'};
   }
   return {estado:'', txt:'Suma de haberes leídos: '+money(s)+'. No encontramos el total de haberes para comprobarlo.'};
+}
+// ¿Basta con la primera lectura de una foto, o conviene leerla otra vez con otro método?
+// - Parece una liquidación: basta si la suma de haberes cuadra con el total. Si no se leyó el total de haberes,
+//   se compara lo imponible con el total imponible; si no se leyó ningún total, basta: una segunda lectura
+//   tampoco se podría comprobar y solo duplicaría la espera.
+// - Parece un finiquito: se leyó bien; no hay nada que releer.
+// - No aparece ninguna palabra de una liquidación: es otro documento y releerlo solo duplica la espera
+//   (medido el 13-11-2026 en un iPhone: 38 s + 39 s con una boleta de exámenes).
+// - Aparecen algunas, pero menos de las necesarias: puede ser una liquidación mal leída (sombra, luz despareja),
+//   así que se relee.
+function bastaPrimeraLectura(rows){
+  var p=parseLiq(rows);
+  if(p.pareceFiniquito) return true;
+  if(!p.pareceLiquidacion) return p.senales.length===0;
+  if(!p.items.length) return false;
+  var f=nuevoArchivo('', p, 0), estado=chequeo(f).estado;
+  if(estado!=='') return estado==='good';
+  if(p.totalImp) return Math.abs(sumaImponible(f)-p.totalImp)<=2;
+  return true;
 }
 // Otros datos encontrados (fecha de ingreso, AFP, contrato, vacaciones, días trabajados).
 function extras(files){
@@ -335,7 +358,7 @@ return {
   norm:norm, abrirPdf:abrirPdf, pdfRows:pdfRows, segments:segments, parseLiq:parseLiq, cleanTok:cleanTok,
   RE_MONEY:RE_MONEY, RE_NUM:RE_NUM, DEST:DEST, RULES:RULES, MESES:MESES,
   SENALES:SENALES, SENALES_MIN:SENALES_MIN, esLiquidacion:esLiquidacion, avisoArchivo:avisoArchivo, hayMontosMarcados:hayMontosMarcados,
-  nuevoArchivo:nuevoArchivo, periodoTxt:periodoTxt, sortedFiles:sortedFiles, fileSum:fileSum, fileIssues:fileIssues, chequeo:chequeo,
-  extras:extras, importTotals:importTotals, planImportacion:planImportacion
+  nuevoArchivo:nuevoArchivo, periodoTxt:periodoTxt, sortedFiles:sortedFiles, fileSum:fileSum, fileIssues:fileIssues, chequeo:chequeo, sumaImponible:sumaImponible,
+  bastaPrimeraLectura:bastaPrimeraLectura, extras:extras, importTotals:importTotals, planImportacion:planImportacion
 };
 });
