@@ -47,6 +47,25 @@ prueba(GRUPO, 'Primera lectura: una liquidación que cuadra basta; si no cuadra,
     igual(Lx.bastaPrimeraLectura(sinSueldo), false, 'liquidación a la que le falta una línea (no cuadra)');
   });
 });
+function miles(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+prueba(GRUPO, 'Primera lectura: sin total de haberes se compara con el total imponible; sin ningún total, basta', function(){
+  return filasPdf('liquidacion-simple.pdf').then(function(rows){
+    var i=rows.map(function(r){ return /total haberes/i.test(r.text); }).indexOf(true);
+    verdadero(i>=0, 'la liquidación de prueba debe tener «Total haberes»');
+    var sinTotal=rows.slice(0, i).concat(rows.slice(i+1));
+    igual(Lx.parseLiq(sinTotal).totalHab, null, 'sin la fila del total');
+    igual(Lx.bastaPrimeraLectura(sinTotal), true, 'sin ningún total no hay con qué comparar: releer solo alarga la espera');
+    // La misma fila convertida en «Total imponible»: con el monto correcto basta; con otro, se relee.
+    var imponible=Lx.sumaImponible(Lx.nuevoArchivo('', Lx.parseLiq(rows), 0));
+    function conImponible(monto){
+      var fila=JSON.parse(JSON.stringify(rows[i]).replace(/haberes/gi, 'imponible').replace(/1\.642\.116/g, miles(monto)));
+      return rows.slice(0, i).concat([fila], rows.slice(i+1));
+    }
+    igual(Lx.parseLiq(conImponible(imponible)).totalImp, imponible, 'debe leer el total imponible');
+    igual(Lx.bastaPrimeraLectura(conImponible(imponible)), true, 'lo imponible cuadra con el total imponible');
+    igual(Lx.bastaPrimeraLectura(conImponible(imponible+100000)), false, 'lo imponible no cuadra: se relee');
+  });
+});
 prueba(GRUPO, 'Primera lectura: sin palabras de liquidación basta; con algunas (lectura a medias) se relee', function(){
   igual(Lx.bastaPrimeraLectura([filaTexto('Boleta examen de sangre 12.500'), filaTexto('Total 12.500')]), true, 'otro documento: releerlo solo alarga la espera');
   igual(Lx.bastaPrimeraLectura([]), true, 'nada leído');
@@ -85,7 +104,8 @@ prueba(GRUPO, 'La barra de avance es accesible y tiene Cancelar y el aviso de pr
     var caja=(h.match(/<div id="impAvance"[\s\S]*?<\/button>\s*<\/div>/)||[''])[0];
     verdadero(caja, 'falta la caja de avance #impAvance');
     verdadero(/role="progressbar"[^>]*aria-valuemin="0"[^>]*aria-valuemax="100"[^>]*aria-valuenow="0"/.test(caja), 'la barra debe ser role="progressbar" con aria-valuenow');
-    verdadero(/id="impAvanceTxt"[^>]*aria-live="polite"/.test(caja), 'el texto del avance debe estar en una zona aria-live="polite"');
+    verdadero(/id="impAvanceVoz" class="sr" aria-live="polite"/.test(caja), 'el avance para lectores de pantalla debe estar en una zona aria-live="polite" oculta');
+    verdadero(!/id="impAvanceTxt"[^>]*aria-live/.test(caja), 'el texto con el porcentaje no debe anunciarse a cada cambio');
     verdadero(/Se lee en tu teléfono o computador\. No se envía a ninguna parte\./.test(caja), 'falta el aviso de privacidad bajo la barra');
     verdadero(/<button type="button" id="btnImpCancelar" class="boton">Cancelar<\/button>/.test(caja), 'falta el botón Cancelar');
   });
@@ -173,6 +193,18 @@ prueba(GRUPO, 'Con dos lecturas, gana la que parece liquidación aunque la otra 
     O.filasDesdeTsv=original;
     igual(n, 2, 'lecturas');
     igual(Lx.parseLiq(rows).pareceLiquidacion, true, 'se quedó con el ruido');
+  }, function(e){ O.filasDesdeTsv=original; throw e; });
+});
+prueba(GRUPO, 'Con dos lecturas, los montos se cuentan con la misma limpieza del lector («1.000.-»)', function(){
+  var O=root.FiniqaOcr, original=O.filasDesdeTsv, n=0;
+  // Ninguna de las dos parece liquidación: gana la de más montos. La primera trae 10 montos escritos «1.000.-».
+  var primera=[filaTexto('1.000.- 2.000.- 3.000.- 4.000.- 5.000.-'), filaTexto('6.000.- 7.000.- 8.000.- 9.000.- 10.000.-')];
+  var segunda=[filaTexto('1.000 2.000 3.000')];
+  O.filasDesdeTsv=function(){ n++; return n===1 ? primera : segunda; };
+  return leerFoto('liquidacion-simple-real.jpg', {validar:function(){ return false; }}).then(function(rows){
+    O.filasDesdeTsv=original;
+    igual(n, 2, 'lecturas');
+    verdadero(rows===primera, 'debía quedarse con la lectura de 10 montos');
   }, function(e){ O.filasDesdeTsv=original; throw e; });
 });
 prueba(GRUPO, 'Cancelar detiene la lectura y la deja lista para otra', function(){
@@ -288,10 +320,11 @@ prueba(GRUPO, 'Calculadora: el lector de imágenes no se carga antes de elegir u
 prueba(GRUPO, 'Calculadora: lee una foto a la vista, bloquea «Continuar» y muestra «Foto 1»', function(){
   return blobFoto('liquidacion-simple-real.jpg').then(function(b){
     return conCalculadora(function(win, $){
-      var vals=[], textos=[], obs=new win.MutationObserver(function(){
+      var vals=[], textos=[], voces=[], obs=new win.MutationObserver(function(){
         if($('impAvance').hidden) return; // al terminar, la barra se oculta y vuelve a 0 para la próxima vez
         var v=+$('impBarra').getAttribute('aria-valuenow'); if(vals[vals.length-1]!==v) vals.push(v);
         var t=$('impAvanceTxt').textContent; if(t && textos[textos.length-1]!==t) textos.push(t);
+        var z=$('impAvanceVoz').textContent; if(z && voces[voces.length-1]!==z) voces.push(z);
       });
       obs.observe($('impAvance'), {attributes:true, subtree:true, childList:true, characterData:true});
       subir(win, $, [{datos:b, nombre:'image.jpg', tipo:'image/jpeg'}]);
@@ -303,6 +336,8 @@ prueba(GRUPO, 'Calculadora: lee una foto a la vista, bloquea «Continuar» y mue
         sinRetroceder(vals, 'barra de la calculadora');
         igual(vals[vals.length-1], 100, 'la barra debe terminar en 100');
         verdadero(textos.some(function(t){ return /^Leyendo tu foto… \d+ %$/.test(t); }), 'el texto debe decir «Leyendo tu foto… N %»: '+textos.join(' | '));
+        verdadero(voces.length>=1 && voces.length<=2 && voces.every(function(z){ return /^(Leyendo tu foto|Revisando la lectura)…$/.test(z); }), 'el lector de pantalla debe oír solo las etapas, sin porcentajes: '+voces.join(' | '));
+        verdadero(textos.length>voces.length, 'la barra debe avanzar más veces de las que se anuncia');
         verdadero($('impAvance').hidden, 'la barra debe ocultarse al terminar');
         verdadero(pasosLibres($, win), '«Continuar» debe volver al terminar');
         var h3=$('impReview').querySelector('.imp-file h3').firstChild.textContent;

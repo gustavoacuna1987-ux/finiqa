@@ -291,7 +291,7 @@ function leerFoto(file, alProgreso, opciones){
   }
   function pareceLiq(rows){ return !!window.FiniqaLector.parseLiq(rows).pareceLiquidacion; }
   function palabras(rows){ var n=0; rows.forEach(function(r){ n+=r.tokens.length; }); return n; }
-  function montos(rows){ var n=0; rows.forEach(function(r){ r.tokens.forEach(function(t){ if(window.FiniqaLector.RE_MONEY.test(t.t.replace(/^\$/,''))) n++; }); }); return n; }
+  function montos(rows){ var n=0; rows.forEach(function(r){ r.tokens.forEach(function(t){ if(window.FiniqaLector.RE_MONEY.test(window.FiniqaLector.cleanTok(t.t))) n++; }); }); return n; }
   var tLector=ahora();
   var cadena=Promise.all([
     cargarLector().then(function(x){ T.esperaLector=ahora()-tLector; fracLector=1; avancePreparar(); return x; }),

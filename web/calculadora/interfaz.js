@@ -456,7 +456,7 @@ function setLeyendo(on){
   ['btnSeguir','btnBoletaSeguir'].forEach(function(id){ $(id).disabled=on; });
   document.querySelectorAll('#pasosLista .paso-btn').forEach(function(b){ b.disabled=on; });
   if(!on){
-    $('impAvance').hidden=true; $('impAvanceTxt').textContent='';
+    $('impAvance').hidden=true; $('impAvanceTxt').textContent=''; $('impAvanceVoz').textContent='';
     $('impBarra').setAttribute('aria-valuenow', 0); $('impBarraRelleno').style.width='';
   }
 }
@@ -469,6 +469,7 @@ function mostrarAvance(q, a){
   var cual = imp.total>1 ? (imp.fotos===imp.total ? 'Foto ' : 'Archivo ')+(imp.hechos+1)+' de '+imp.total+' · ' : '';
   var txt=cual+que+' '+pct+' %';
   var t=$('impAvanceTxt'); if(t.textContent!==txt) t.textContent=txt;
+  var voz=cual+que, v=$('impAvanceVoz'); if(v.textContent!==voz) v.textContent=voz;
   $('impBarra').setAttribute('aria-valuenow', pct);
   $('impBarraRelleno').style.width=pct+'%';
   if($('impAvance').hidden){ $('impAvance').hidden=false; setImpStatus('',''); }
