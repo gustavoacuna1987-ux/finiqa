@@ -37,6 +37,27 @@ fotos.forEach(function(id){
   });
 });
 
+/* ---------- ¿Basta con la primera lectura de una foto? ---------- */
+function filaTexto(t){ return {text:t, page:0, tokens:t.split(' ').map(function(w, i){ return {t:w, x:i*100}; })}; }
+prueba(GRUPO, 'Primera lectura: una liquidación que cuadra basta; si no cuadra, se relee', function(){
+  return filasPdf('liquidacion-simple.pdf').then(function(rows){
+    igual(Lx.bastaPrimeraLectura(rows), true, 'liquidación que cuadra');
+    var sinSueldo=rows.filter(function(r){ return !/sueldo base/i.test(r.text); });
+    verdadero(sinSueldo.length<rows.length, 'la liquidación de prueba debe tener «Sueldo base»');
+    igual(Lx.bastaPrimeraLectura(sinSueldo), false, 'liquidación a la que le falta una línea (no cuadra)');
+  });
+});
+prueba(GRUPO, 'Primera lectura: sin palabras de liquidación basta; con algunas (lectura a medias) se relee', function(){
+  igual(Lx.bastaPrimeraLectura([filaTexto('Boleta examen de sangre 12.500'), filaTexto('Total 12.500')]), true, 'otro documento: releerlo solo alarga la espera');
+  igual(Lx.bastaPrimeraLectura([]), true, 'nada leído');
+  var aMedias=[filaTexto('Sueldo b4se 600.000'), filaTexto('AFP Modelo 63.000'), filaTexto('x7 ;; 1.2.0')];
+  igual(Lx.parseLiq(aMedias).pareceLiquidacion, false, 'la lectura a medias no alcanza a parecer liquidación');
+  igual(Lx.bastaPrimeraLectura(aMedias), false, 'lectura a medias de una liquidación: debe releerse');
+  var finiquito=[filaTexto('Finiquito de contrato de trabajo'), filaTexto('Indemnización años de servicio 1.200.000'), filaTexto('AFP Modelo Salud Fonasa'), filaTexto('Líquido a pagar 1.200.000')];
+  igual(Lx.parseLiq(finiquito).pareceFiniquito, true, 'el ejemplo debe parecer un finiquito');
+  igual(Lx.bastaPrimeraLectura(finiquito), true, 'un finiquito se leyó bien: no se relee');
+});
+
 /* ---------- La página: un solo control, sin cámara, con barra de avance ---------- */
 function leer(r){ return root.FiniqaEntorno.leerTexto(r); }
 prueba(GRUPO, 'El control de carga acepta PDF y fotos, sin cámara ni botón aparte', function(){
@@ -142,6 +163,17 @@ prueba(GRUPO, 'Con dos lecturas, dice «Revisando», nunca retrocede y termina e
     verdadero(rows.tiempos.lectura2>0, 'debía haber segunda lectura');
     verdadero(antes!=null && antes>=0.7 && antes<0.8, 'la segunda lectura debe partir cerca del 75 %: '+antes);
   });
+});
+prueba(GRUPO, 'Con dos lecturas, gana la que parece liquidación aunque la otra tenga más montos', function(){
+  var O=root.FiniqaOcr, original=O.filasDesdeTsv, n=0, ruido=[];
+  // Primera lectura: puro ruido con muchos montos y ninguna palabra de liquidación. La segunda es la real.
+  for(var i=0;i<60;i++) ruido.push(filaTexto('1.000 2.000 3.000'));
+  O.filasDesdeTsv=function(){ n++; return n===1 ? ruido : original.apply(O, arguments); };
+  return leerFoto('liquidacion-simple-real.jpg', {validar:function(){ return false; }}).then(function(rows){
+    O.filasDesdeTsv=original;
+    igual(n, 2, 'lecturas');
+    igual(Lx.parseLiq(rows).pareceLiquidacion, true, 'se quedó con el ruido');
+  }, function(e){ O.filasDesdeTsv=original; throw e; });
 });
 prueba(GRUPO, 'Cancelar detiene la lectura y la deja lista para otra', function(){
   var L=root.FiniqaLectorImagen, avisos=0;

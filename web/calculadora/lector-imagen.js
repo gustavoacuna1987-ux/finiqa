@@ -289,6 +289,7 @@ function leerFoto(file, alProgreso, opciones){
       return window.FiniqaOcr.filasDesdeTsv(res.data.tsv, canvas.width, 0);
     });
   }
+  function pareceLiq(rows){ return !!window.FiniqaLector.parseLiq(rows).pareceLiquidacion; }
   function palabras(rows){ var n=0; rows.forEach(function(r){ n+=r.tokens.length; }); return n; }
   function montos(rows){ var n=0; rows.forEach(function(r){ r.tokens.forEach(function(t){ if(window.FiniqaLector.RE_MONEY.test(t.t.replace(/^\$/,''))) n++; }); }); return n; }
   var tLector=ahora();
@@ -324,6 +325,9 @@ function leerFoto(file, alProgreso, opciones){
     return leerCon('0', A.tramo(FIN_LECTURA1, 1)).then(function(otra){
       T.lectura2=ahora()-a;
       if(opciones.validar(otra)) return otra;
+      // Si solo una de las dos lecturas parece una liquidación, esa es la buena; si no, la que tiene más montos.
+      var pa=pareceLiq(rows), pb=pareceLiq(otra);
+      if(pa!==pb) return pb ? otra : rows;
       return montos(otra)>montos(rows) ? otra : rows;
     });
   }).then(function(rows){

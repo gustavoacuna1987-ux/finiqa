@@ -270,6 +270,19 @@ function chequeo(f){
   }
   return {estado:'', txt:'Suma de haberes leídos: '+money(s)+'. No encontramos el total de haberes para comprobarlo.'};
 }
+// ¿Basta con la primera lectura de una foto, o conviene leerla otra vez con otro método?
+// - Parece una liquidación: basta si la suma de haberes cuadra con el total.
+// - Parece un finiquito: se leyó bien; no hay nada que releer.
+// - No aparece ninguna palabra de una liquidación: es otro documento y releerlo solo duplica la espera
+//   (medido el 13-11-2026 en un iPhone: 38 s + 39 s con una boleta de exámenes).
+// - Aparecen algunas, pero menos de las necesarias: puede ser una liquidación mal leída (sombra, luz despareja),
+//   así que se relee.
+function bastaPrimeraLectura(rows){
+  var p=parseLiq(rows);
+  if(p.pareceFiniquito) return true;
+  if(!p.pareceLiquidacion) return p.senales.length===0;
+  return !!p.items.length && chequeo(nuevoArchivo('', p, 0)).estado==='good';
+}
 // Otros datos encontrados (fecha de ingreso, AFP, contrato, vacaciones, días trabajados).
 function extras(files){
   var sorted=sortedFiles(files), latest=sorted[0];
@@ -336,6 +349,6 @@ return {
   RE_MONEY:RE_MONEY, RE_NUM:RE_NUM, DEST:DEST, RULES:RULES, MESES:MESES,
   SENALES:SENALES, SENALES_MIN:SENALES_MIN, esLiquidacion:esLiquidacion, avisoArchivo:avisoArchivo, hayMontosMarcados:hayMontosMarcados,
   nuevoArchivo:nuevoArchivo, periodoTxt:periodoTxt, sortedFiles:sortedFiles, fileSum:fileSum, fileIssues:fileIssues, chequeo:chequeo,
-  extras:extras, importTotals:importTotals, planImportacion:planImportacion
+  bastaPrimeraLectura:bastaPrimeraLectura, extras:extras, importTotals:importTotals, planImportacion:planImportacion
 };
 });

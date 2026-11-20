@@ -479,14 +479,7 @@ function cancelarLectura(){
   $('impReview').hidden=true; $('pwdWrap').hidden=true;
   setImpStatus('',''); setLeyendo(false);
 }
-// ¿Basta con la primera lectura? Sí, si la suma de haberes coincide con el total de la liquidación. Si no coincide,
-// se lee una segunda vez con otro método. Si la foto no parece una liquidación no hay nada que cuadrar: releerla
-// solo duplicaba la espera (medido el 13-11-2026 en un iPhone: 38 s + 39 s con una boleta de exámenes).
-function fotoCuadra(rows){
-  var p=Lx.parseLiq(rows);
-  if(!p.pareceLiquidacion) return true;
-  return !!p.items.length && Lx.chequeo(Lx.nuevoArchivo('', p, 0)).estado==='good';
-}
+// ¿Basta con la primera lectura de una foto? Lo decide el lector (motor/lector.js, bastaPrimeraLectura).
 var MSJ_FOTO_MALA='No pudimos abrir esta foto. Guárdala como JPG o PNG y súbela de nuevo.';
 var MSJ_FOTO_SIN_LIQ='No logramos reconocer una liquidación en la foto. Escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»), o ingresa los montos a mano.';
 var MSJ_SIN_LECTOR='No pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.';
@@ -507,7 +500,7 @@ function processQueue(){
   if(foto || !$('impAvance').hidden) mostrarAvance(q, {etapa:'leyendo', avance:0});
   else setImpStatus('Leyendo “'+esc(name)+'”…','');
   var imagen=false;
-  (foto ? FiniqaLectorImagen.leerFoto(q.file, alAvanzar, {validar:fotoCuadra}).then(function(rows){ imagen=true; return rows; }, function(e){
+  (foto ? FiniqaLectorImagen.leerFoto(q.file, alAvanzar, {validar:Lx.bastaPrimeraLectura}).then(function(rows){ imagen=true; return rows; }, function(e){
       if(e && e.message==='cancelado') throw e;
       throw {code:(e && e.message==='imagen') ? 'fotoMala' : (e && e.message==='lector') ? 'lector' : 'ocr'};
     })
