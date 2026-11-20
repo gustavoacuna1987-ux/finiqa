@@ -186,6 +186,30 @@ prueba(GRUPO, 'Una carga vieja del lector que falla tarde no borra el lector nue
     igual(L.estado().lectorCreado, true, 'la carga vieja que falló borró el lector nuevo');
   }, function(e){ T.createWorker=original; throw e; });
 });
+prueba(GRUPO, 'Si no se puede cargar el lector, el error dice «lector»', function(){
+  var L=root.FiniqaLectorImagen, T=root.Tesseract, original=T.createWorker;
+  return blobFoto('liquidacion-simple-real.jpg').then(function(b){
+    // Parte sin lector (cancelar una lectura en curso lo cierra) y la carga siguiente falla, como sin internet.
+    L.leerFoto(new File([b], 'image.jpg', {type:'image/jpeg'}), null, {}).catch(function(){}); L.cancelar();
+    T.createWorker=function(){ return Promise.reject(new Error('red')); };
+    return L.leerFoto(new File([b], 'image.jpg', {type:'image/jpeg'}), null, {});
+  }).then(function(){ T.createWorker=original; throw new Error('la lectura no falló'); }, function(e){
+    T.createWorker=original;
+    igual(e && e.message, 'lector');
+    igual(L.estado(), {lectorCreado:false, leyendo:false, lienzos:0}, 'después de fallar');
+  });
+});
+prueba(GRUPO, 'Si el lector cargó pero la lectura falla, el error dice «lectura» (foto y PDF que es imagen)', function(){
+  var L=root.FiniqaLectorImagen, O=root.FiniqaOcr, original=O.filasDesdeTsv, Env=root.FiniqaEntorno;
+  O.filasDesdeTsv=function(){ throw new RangeError('sin memoria'); };
+  function falla(p, que){ return p.then(function(){ throw new Error(que+': la lectura no falló'); }, function(e){ igual(e && e.message, 'lectura', que); }); }
+  return falla(leerFoto('liquidacion-simple-real.jpg', {}), 'foto').then(function(){
+    return Env.leerPdf('liquidacion-imagen.pdf').then(function(d){ return Lx.abrirPdf(Env.pdfjs, d); }).then(function(pdf){ return falla(L.leer(pdf), 'PDF imagen'); });
+  }).then(function(){
+    O.filasDesdeTsv=original;
+    igual(L.estado(), {lectorCreado:true, leyendo:false, lienzos:0}, 'después de fallar, el lector sigue listo');
+  }, function(e){ O.filasDesdeTsv=original; throw e; });
+});
 
 /* ---------- La calculadora mientras lee (abierta de forma invisible) ---------- */
 function abrirCalculadora(){
@@ -306,6 +330,26 @@ prueba(GRUPO, 'Calculadora: una imagen que no se puede abrir da un mensaje claro
       verdadero($('impAvance').hidden && pasosLibres($, win), 'la pantalla debe quedar usable');
       $('btnManual').click();
       verdadero(!$('sueldoManual').hidden, 'la página dejó de responder');
+    });
+  });
+});
+[['lector', 'image/jpeg', 'foto.jpg', 'leerFoto', 'No pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.'],
+ ['lectura', 'image/jpeg', 'foto.jpg', 'leerFoto', 'No pudimos terminar de leer esta foto. Inténtalo de nuevo o, mejor, escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»). También puedes ingresar los montos a mano.'],
+ ['lector', 'application/pdf', 'liquidacion-imagen.pdf', 'leer', '“liquidacion-imagen.pdf” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.'],
+ ['lectura', 'application/pdf', 'liquidacion-imagen.pdf', 'leer', '“liquidacion-imagen.pdf” es una imagen y no pudimos terminar de leerla. Inténtalo de nuevo, descarga la liquidación desde el portal de tu empresa o ingresa los montos a mano.']
+].forEach(function(c){
+  prueba(GRUPO, 'Calculadora: error «'+c[0]+'» al leer '+(c[3]==='leer' ? 'un PDF que es imagen' : 'una foto')+' da el mensaje que corresponde', function(){
+    var datos=c[3]==='leer' ? fetch('pdfs-sinteticos/liquidacion-imagen.pdf').then(function(r){ return r.blob(); }) : blobFoto('liquidacion-simple-real.jpg');
+    return datos.then(function(b){
+      return conCalculadora(function(win, $){
+        // Se simula la falla sin leer de verdad: solo importa qué mensaje ve la persona.
+        win.FiniqaLectorImagen[c[3]]=function(){ return Promise.reject(new Error(c[0])); };
+        subir(win, $, [{datos:b, nombre:c[2], tipo:c[1]}]);
+        return hasta(function(){ return /bad/.test($('impStatus').className); }, 30000, 'avisar el error').then(function(){
+          igual($('impStatus').textContent, c[4]);
+          verdadero($('impAvance').hidden && pasosLibres($, win), 'la pantalla debe quedar usable');
+        });
+      });
     });
   });
 });

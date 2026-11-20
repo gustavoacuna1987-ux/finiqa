@@ -490,6 +490,8 @@ function fotoCuadra(rows){
 var MSJ_FOTO_MALA='No pudimos abrir esta foto. Guárdala como JPG o PNG y súbela de nuevo.';
 var MSJ_FOTO_SIN_LIQ='No logramos reconocer una liquidación en la foto. Escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»), o ingresa los montos a mano.';
 var MSJ_SIN_LECTOR='No pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.';
+// El lector cargó, pero la lectura falló (por ejemplo, el teléfono se quedó sin memoria): pedir internet no ayudaría.
+var MSJ_FOTO_NO_LEIDA='No pudimos terminar de leer esta foto. Inténtalo de nuevo o, mejor, escanéala con tu teléfono y sube ese PDF (más arriba: «¿Cómo la escaneo con el teléfono?»). También puedes ingresar los montos a mano.';
 function processQueue(){
   var lote=imp.lote;
   if(!imp.queue.length){ finishImport(); return; }
@@ -507,7 +509,7 @@ function processQueue(){
   var imagen=false;
   (foto ? FiniqaLectorImagen.leerFoto(q.file, alAvanzar, {validar:fotoCuadra}).then(function(rows){ imagen=true; return rows; }, function(e){
       if(e && e.message==='cancelado') throw e;
-      throw {code:(e && e.message==='imagen') ? 'fotoMala' : 'ocr'};
+      throw {code:(e && e.message==='imagen') ? 'fotoMala' : (e && e.message==='lector') ? 'lector' : 'ocr'};
     })
   : q.file.arrayBuffer()
     .then(function(buf){
@@ -523,7 +525,7 @@ function processQueue(){
         mostrarAvance(q, {etapa:'leyendo', avance:0});
         return FiniqaLectorImagen.leer(pdf, alAvanzar).catch(function(e){
           if(e && e.message==='cancelado') throw e;
-          throw {code:'ocr'};
+          throw {code:(e && e.message==='lector') ? 'lector' : 'ocr'};
         });
       });
     }))
@@ -542,7 +544,9 @@ function processQueue(){
       if(e && e.name==='PasswordException'){ askPwd(q, e.code===2); return; }
       if(e && e.code==='lib'){ imp.queue=[]; setLeyendo(false); setImpStatus('No se pudo cargar el lector de PDF. Recarga la página e inténtalo de nuevo.','bad'); return; }
       if(e && e.code==='fotoMala') imp.errors.push(de+MSJ_FOTO_MALA);
-      else if(e && e.code==='ocr') imp.errors.push(foto ? de+MSJ_SIN_LECTOR : '“'+esc(name)+'” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.');
+      // 'lector': no se pudo cargar el lector (falta internet la primera vez). 'ocr': cargó, pero no se pudo leer la imagen.
+      else if(e && e.code==='lector') imp.errors.push(foto ? de+MSJ_SIN_LECTOR : '“'+esc(name)+'” es una imagen y no pudimos cargar el lector de imágenes. La primera vez se necesita internet: inténtalo con conexión o ingresa los montos a mano.');
+      else if(e && e.code==='ocr') imp.errors.push(foto ? de+MSJ_FOTO_NO_LEIDA : '“'+esc(name)+'” es una imagen y no pudimos terminar de leerla. Inténtalo de nuevo, descarga la liquidación desde el portal de tu empresa o ingresa los montos a mano.');
       else imp.errors.push('No se pudo leer “'+esc(name)+'”. Puede estar dañado.');
       siguiente();
     });

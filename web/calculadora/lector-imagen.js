@@ -12,6 +12,8 @@
  *   FiniqaLectorImagen.leer(pdf, alProgreso)                -> Promise<filas como FiniqaLector.pdfRows>
  *   FiniqaLectorImagen.leerFoto(archivo, alProgreso, opc)   -> Promise<filas>, con filas.tiempos (ms por etapa)
  *   FiniqaLectorImagen.cancelar()                           -> detiene la lectura en curso (rechaza con 'cancelado')
+ *   Si falla, rechaza con Error de mensaje 'cancelado', 'imagen' (la foto no se pudo abrir), 'lector' (no se pudo
+ *   cargar el lector: suele ser falta de internet la primera vez) o 'lectura' (cualquier otra falla al leer).
  *   alProgreso({etapa:'leyendo'|'revisando', avance:0..1, pagina, paginas}) */
 (function(){
 'use strict';
@@ -105,7 +107,8 @@ function nuevoControl(){
   control=c;
   return c;
 }
-function seguir(c){ if(c.cancelado) throw new Error('cancelado'); }
+// Una lectura cancelada o ya terminada (por ejemplo, falló el lector mientras se preparaba la foto) no sigue trabajando.
+function seguir(c){ if(c.cancelado || c.terminado) throw new Error('cancelado'); }
 function cancelar(){
   var c=control; control=null;
   avisar=function(){};
@@ -118,15 +121,28 @@ function cancelar(){
 // Las imágenes de trabajo (unos 17 MB cada una a 2.400 píxeles) se sueltan apenas termina la lectura, bien, mal o
 // cancelada: el iPhone tiene un tope de memoria para estas imágenes y las devuelve tarde si solo se espera al sistema.
 var lienzosVivos=0;
-function usarLienzo(c, cv){ c.lienzos.push(cv); lienzosVivos++; return cv; }
+function usarLienzo(c, cv){
+  if(c.terminado){ cv.width=cv.height=0; throw new Error('cancelado'); }
+  c.lienzos.push(cv); lienzosVivos++; return cv;
+}
 function soltarLienzos(c){
   c.lienzos.forEach(function(cv){ cv.width=cv.height=0; lienzosVivos--; });
   c.lienzos=[];
 }
+// Si no se puede cargar el lector, el error lo dice: así la persona sabe que el problema es la conexión y no la foto.
+function cargarLector(){
+  return obtenerLector().catch(function(e){ var x=new Error('lector'); x.causa=e; throw x; });
+}
+// Errores conocidos; cualquier otro (memoria del teléfono, una falla de Tesseract…) se informa como 'lectura'.
+var ERRORES=['cancelado', 'imagen', 'lector', 'lectura'];
+function errorLectura(e){
+  if(e && ERRORES.indexOf(e.message)>=0) return e;
+  var x=new Error('lectura'); x.causa=e; return x;
+}
 // Corre la lectura y la corta si se cancela. Al terminar (bien o mal) se dejan de escuchar los avisos de Tesseract.
 function conControl(c, cadena){
-  function fin(){ soltarLienzos(c); if(control===c){ control=null; avisar=function(){}; } }
-  return Promise.race([cadena, c.promesa]).then(function(r){ fin(); return r; }, function(e){ fin(); throw e; });
+  function fin(){ c.terminado=true; soltarLienzos(c); if(control===c){ control=null; avisar=function(){}; } }
+  return Promise.race([cadena, c.promesa]).then(function(r){ fin(); return r; }, function(e){ fin(); throw errorLectura(e); });
 }
 
 /* ---------- Leer las páginas de un PDF que es imagen ---------- */
@@ -153,7 +169,7 @@ function leer(pdf, alProgreso){
       // intent 'print': dibuja de una vez, sin esperar a que la pantalla se refresque; así sigue aunque la persona
       // cambie de pestaña o de aplicación mientras se lee (con la pestaña de fondo, el dibujo normal se detiene).
       return pg.render({canvasContext:ctx, viewport:vp, intent:'print'}).promise.then(function(){
-        seguir(c); return obtenerLector();
+        seguir(c); return cargarLector();
       }).then(function(w){
         seguir(c); carga(1); lectura=tramo;
         // thresholding_method 2 (Sauvola): compara cada punto con su entorno; aguanta fondos grises y sombras.
@@ -277,7 +293,7 @@ function leerFoto(file, alProgreso, opciones){
   function montos(rows){ var n=0; rows.forEach(function(r){ r.tokens.forEach(function(t){ if(window.FiniqaLector.RE_MONEY.test(t.t.replace(/^\$/,''))) n++; }); }); return n; }
   var tLector=ahora();
   var cadena=Promise.all([
-    obtenerLector().then(function(x){ T.esperaLector=ahora()-tLector; fracLector=1; avancePreparar(); return x; }),
+    cargarLector().then(function(x){ T.esperaLector=ahora()-tLector; fracLector=1; avancePreparar(); return x; }),
     cargarImagen(file).then(function(img){
       seguir(c);
       var a=ahora();
