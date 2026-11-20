@@ -501,7 +501,8 @@ function processQueue(){
     imp.errors.push('“'+esc(name)+'” no es un PDF ni una foto.'); siguiente(); return;
   }
   var alAvanzar=function(a){ if(lote===imp.lote) mostrarAvance(q, a); };
-  if(foto) mostrarAvance(q, {etapa:'leyendo', avance:0});
+  // Si la barra ya está a la vista (venía de una foto), un PDF con texto la sigue usando: nunca barra y texto a la vez.
+  if(foto || !$('impAvance').hidden) mostrarAvance(q, {etapa:'leyendo', avance:0});
   else setImpStatus('Leyendo “'+esc(name)+'”…','');
   var imagen=false;
   (foto ? FiniqaLectorImagen.leerFoto(q.file, alAvanzar, {validar:fotoCuadra}).then(function(rows){ imagen=true; return rows; }, function(e){

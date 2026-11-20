@@ -150,10 +150,41 @@ prueba(GRUPO, 'Cancelar detiene la lectura y la deja lista para otra', function(
     L.cancelar();
     return p.then(function(){ throw new Error('la lectura no se canceló'); }, function(e){ igual(e && e.message, 'cancelado'); });
   }).then(function(){
-    igual(L.estado(), {lectorCreado:false, leyendo:false}, 'después de cancelar');
+    igual(L.estado(), {lectorCreado:false, leyendo:false, lienzos:0}, 'después de cancelar');
     // La siguiente lectura funciona (con un lector nuevo).
     return leerFoto('liquidacion-simple-real.jpg', {validar:cuadra});
   }).then(function(rows){ verdadero(rows.length>0, 'la lectura después de cancelar no leyó nada'); });
+});
+prueba(GRUPO, 'Al terminar no quedan imágenes de trabajo, y Cancelar sin lectura en curso deja el lector listo', function(){
+  var L=root.FiniqaLectorImagen;
+  return leerFoto('liquidacion-simple-real.jpg', {validar:cuadra}).then(function(){
+    igual(L.estado(), {lectorCreado:true, leyendo:false, lienzos:0}, 'al terminar de leer');
+    L.cancelar();
+    igual(L.estado(), {lectorCreado:true, leyendo:false, lienzos:0}, 'cancelar sin lectura en curso no debe cerrar el lector');
+  });
+});
+prueba(GRUPO, 'Una carga vieja del lector que falla tarde no borra el lector nuevo', function(){
+  var L=root.FiniqaLectorImagen, T=root.Tesseract, original=T.createWorker, llamadas=0;
+  function archivo(b){ return new File([b], 'image.jpg', {type:'image/jpeg'}); }
+  function cancelada(p){ return p.then(function(){ throw new Error('la lectura no se canceló'); }, function(e){ igual(e && e.message, 'cancelado'); }); }
+  return blobFoto('liquidacion-simple-real.jpg').then(function(b){
+    // Parte sin lector: cancelar una lectura en curso lo cierra.
+    var p0=L.leerFoto(archivo(b), null, {validar:cuadra}); L.cancelar();
+    // La primera carga falla tarde (como sin internet); las siguientes son normales.
+    T.createWorker=function(){
+      llamadas++;
+      if(llamadas===1) return new Promise(function(res, rej){ setTimeout(function(){ rej(new Error('red')); }, 500); });
+      return original.apply(T, arguments);
+    };
+    var p1=L.leerFoto(archivo(b), null, {validar:cuadra}); L.cancelar();
+    var p2=L.leerFoto(archivo(b), null, {validar:cuadra});
+    return Promise.all([cancelada(p0), cancelada(p1), p2, espera(1000)]);
+  }).then(function(r){
+    T.createWorker=original;
+    verdadero(r[2].length>0, 'la lectura con el lector nuevo no leyó nada');
+    igual(llamadas, 2, 'cargas del lector');
+    igual(L.estado().lectorCreado, true, 'la carga vieja que falló borró el lector nuevo');
+  }, function(e){ T.createWorker=original; throw e; });
 });
 
 /* ---------- La calculadora mientras lee (abierta de forma invisible) ---------- */
@@ -243,6 +274,26 @@ prueba(GRUPO, 'Calculadora: Cancelar deja la cola vacía y la pantalla como ante
         // Si la cola no quedó vacía, a esta altura ya estaría leyendo la segunda foto o mostrando la revisión.
         verdadero($('impAvance').hidden && $('impReview').hidden && !$('impStatus').textContent, 'algo siguió leyendo después de cancelar: '+$('impStatus').textContent+$('impAvanceTxt').textContent);
         igual($('importCard').innerHTML.replace(/ style="[^"]*"/g,'').replace(/aria-valuenow="\d+"/,''), antes.replace(/ style="[^"]*"/g,'').replace(/aria-valuenow="\d+"/,''), 'la tarjeta de carga cambió');
+      });
+    });
+  });
+});
+prueba(GRUPO, 'Calculadora: una foto y un PDF con texto juntos usan una sola barra (nunca barra y texto a la vez)', function(){
+  return Promise.all([blobFoto('liquidacion-simple-real.jpg'), fetch('pdfs-sinteticos/liquidacion-simple.pdf').then(function(r){ return r.blob(); })]).then(function(b){
+    return conCalculadora(function(win, $){
+      var choques=[], textos=[], obs=new win.MutationObserver(function(){
+        var barra=!$('impAvance').hidden, estado=$('impStatus').textContent, t=$('impAvanceTxt').textContent;
+        if(barra && estado) choques.push(t+' | '+estado);
+        if(barra && t && textos[textos.length-1]!==t) textos.push(t);
+      });
+      obs.observe($('importCard'), {attributes:true, subtree:true, childList:true, characterData:true});
+      subir(win, $, [{datos:b[0], nombre:'image.jpg', tipo:'image/jpeg'}, {datos:b[1], nombre:'liquidacion-simple.pdf', tipo:'application/pdf'}]);
+      return hasta(function(){ return !$('impReview').hidden || /bad/.test($('impStatus').className); }, 60000, 'terminar de leer los dos archivos').then(function(){
+        obs.disconnect();
+        verdadero(!$('impReview').hidden, 'no mostró la revisión: '+$('impStatus').textContent);
+        igual(choques, [], 'la barra y el texto de estado se vieron a la vez');
+        verdadero(textos.some(function(t){ return /^Archivo 2 de 2 · Leyendo tu PDF… \d+ %$/.test(t); }), 'el PDF debe seguir en la barra: '+textos.join(' | '));
+        verdadero($('impAvance').hidden && pasosLibres($, win), 'la barra debe ocultarse al terminar');
       });
     });
   });

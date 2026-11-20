@@ -61,8 +61,8 @@ var SIN_SIMD=/[?&]simd=0/.test(location.search);
 var lector=null, avisar=function(){}, lectorMs=null;
 function obtenerLector(){
   if(!lector){
-    var t0=ahora();
-    lector=Promise.resolve()
+    var t0=ahora(), este;
+    este=lector=Promise.resolve()
       .then(function(){ return window.Tesseract ? null : cargarScript(TESS+'tesseract.min.js'); })
       .then(function(){
         // Todas las rutas apuntan a esta app: nunca se usa la red de distribución (CDN) por defecto de Tesseract.
@@ -77,7 +77,9 @@ function obtenerLector(){
       // tessedit_do_invert=0: por defecto Tesseract relee "en negativo" cada línea dudosa (los bordes de las
       // tablas generan muchas); en documentos de letra oscura sobre fondo claro solo cuesta tiempo.
       .then(function(w){ return w.setParameters({user_defined_dpi:'300', tessedit_do_invert:'0'}).then(function(){ lectorMs=ahora()-t0; return w; }); });
-    lector.catch(function(){ lector=null; });
+    // Si falla, se olvida solo si sigue siendo el lector vigente: tras cancelar puede haber uno nuevo, y una
+    // carga vieja que falla tarde no debe borrarlo (quedaría un lector suelto que nadie puede cerrar).
+    este.catch(function(){ if(lector===este) lector=null; });
   }
   return lector;
 }
@@ -93,10 +95,11 @@ function avanceCarga(m){
 
 /* ---------- Cancelar ---------- */
 // Cada lectura tiene su control; cancelar() la rechaza de inmediato con Error('cancelado') y termina el
-// trabajador de Tesseract (el siguiente archivo crea uno nuevo).
+// trabajador de Tesseract (el siguiente archivo crea uno nuevo). Si no hay ninguna lectura de imagen en curso
+// (por ejemplo, se está leyendo un PDF con texto), el lector se deja listo: cerrarlo obligaría a cargarlo de nuevo.
 var control=null;
 function nuevoControl(){
-  var c={cancelado:false};
+  var c={cancelado:false, lienzos:[]};
   c.promesa=new Promise(function(res, rej){ c.rechazar=rej; });
   c.promesa.catch(function(){});
   control=c;
@@ -106,13 +109,23 @@ function seguir(c){ if(c.cancelado) throw new Error('cancelado'); }
 function cancelar(){
   var c=control; control=null;
   avisar=function(){};
-  if(c && !c.cancelado){ c.cancelado=true; c.rechazar(new Error('cancelado')); }
+  if(!c) return;
+  if(!c.cancelado){ c.cancelado=true; c.rechazar(new Error('cancelado')); }
+  soltarLienzos(c);
   var l=lector; lector=null; lectorMs=null;
   if(l) l.then(function(w){ return w.terminate(); }).catch(function(){});
 }
+// Las imágenes de trabajo (unos 17 MB cada una a 2.400 píxeles) se sueltan apenas termina la lectura, bien, mal o
+// cancelada: el iPhone tiene un tope de memoria para estas imágenes y las devuelve tarde si solo se espera al sistema.
+var lienzosVivos=0;
+function usarLienzo(c, cv){ c.lienzos.push(cv); lienzosVivos++; return cv; }
+function soltarLienzos(c){
+  c.lienzos.forEach(function(cv){ cv.width=cv.height=0; lienzosVivos--; });
+  c.lienzos=[];
+}
 // Corre la lectura y la corta si se cancela. Al terminar (bien o mal) se dejan de escuchar los avisos de Tesseract.
 function conControl(c, cadena){
-  function fin(){ if(control===c){ control=null; avisar=function(){}; } }
+  function fin(){ soltarLienzos(c); if(control===c){ control=null; avisar=function(){}; } }
   return Promise.race([cadena, c.promesa]).then(function(r){ fin(); return r; }, function(e){ fin(); throw e; });
 }
 
@@ -135,7 +148,7 @@ function leer(pdf, alProgreso){
     return pdf.getPage(i).then(function(pg){
       seguir(c);
       var vp1=pg.getViewport({scale:1}), vp=pg.getViewport({scale:LADO/Math.max(vp1.width, vp1.height)});
-      var cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+      var cv=usarLienzo(c, document.createElement('canvas')); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
       var ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
       // intent 'print': dibuja de una vez, sin esperar a que la pantalla se refresque; así sigue aunque la persona
       // cambie de pestaña o de aplicación mientras se lee (con la pestaña de fondo, el dibujo normal se detiene).
@@ -268,7 +281,7 @@ function leerFoto(file, alProgreso, opciones){
     cargarImagen(file).then(function(img){
       seguir(c);
       var a=ahora();
-      canvas=escalar(img, opciones.lado);
+      canvas=usarLienzo(c, escalar(img, opciones.lado));
       T.original=img.naturalWidth+'×'+img.naturalHeight; T.leida=canvas.width+'×'+canvas.height;
       T.abrir=a-t0; T.escalar=ahora()-a; a=ahora();
       fracFoto=0.2; avancePreparar();
@@ -300,15 +313,15 @@ function leerFoto(file, alProgreso, opciones){
   }).then(function(rows){
     T.total=ahora()-t0; T.lector=lectorMs; T.lectorYaListo=lectorYaListo; T.simd=tieneSimd() && !SIN_SIMD;
     T.filas=rows.length; T.palabras=palabras(rows); T.psm=opciones.psm||PSM; T.sinRotar=!!opciones.sinRotar;
-    rows.tiempos=T; canvas.width=canvas.height=0;
+    rows.tiempos=T;
     A.fin();
     return rows;
   });
   return conControl(c, cadena);
 }
 
-// estado(): para las pruebas (que nada se prepare antes de elegir un archivo).
-function estado(){ return {lectorCreado:!!lector, leyendo:!!control}; }
+// estado(): para las pruebas (que nada se prepare antes de elegir un archivo y que no queden imágenes de trabajo).
+function estado(){ return {lectorCreado:!!lector, leyendo:!!control, lienzos:lienzosVivos}; }
 
 window.FiniqaLectorImagen={leer:leer, leerFoto:leerFoto, cancelar:cancelar, estado:estado, crearAvance:crearAvance,
   quitarLineas:quitarLineas, escalar:escalar, LADO_FOTO:LADO_FOTO};
