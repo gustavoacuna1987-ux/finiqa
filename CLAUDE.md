@@ -36,6 +36,12 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 - Antes de publicar el viernes: pruebas en verde, una pasada en el iPhone del dueño con un PDF de ejemplo, y que se vean el aviso de "referencial" y las bases legales. Si salen varios PR juntos, la caché de `sw.js` sube un solo número.
 - Cada publicación (también las urgentes) se anota en `NOVEDADES.md`, en lenguaje simple.
 
+## Orden del trabajo
+- **Una sola lista de pendientes:** `docs/privado/backlog.md` (privada). Partes: Esta semana (máx. 3), Siguiente, En pausa (con su rama), Algún día, Hecho. Al empezar una sesión, ubicar la tarea en esa lista; al terminarla, pasarla a «Hecho».
+- **Ideas sueltas:** si en medio de una tarea el dueño cuenta una idea que no tiene que ver con ella, ofrecer anotarla en «Algún día» (una línea, con fecha) y seguir con la tarea. No abrir el tema salvo que el dueño lo pida.
+- **Cierre del viernes:** una tarea programada de la app abre una sesión los viernes a las 19:00 que prepara el cierre (PR listos, borrador de novedades, lista al día, propuesta de 3 cosas para la semana). Nada se mezcla ni se publica sin el sí del dueño en esa sesión.
+- Chat (claude.ai) es para pensar: negocio, abogado, precios, textos. Code es para construir y mantener la lista.
+
 ## Entorno
 - Sin Node.js local: las pruebas corren en GitHub Actions (Node y Chrome) y en el navegador (`pruebas/index.html`).
 - Servidor local sin caché: `python3 pruebas/servidor-local.py` (puerto 8642). Con `http.server` normal el navegador guarda copias viejas de los archivos.
