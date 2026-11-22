@@ -28,6 +28,14 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 - El paso a paso es solo presentación: todos los campos y sus `id` siguen en la página (la comparación en vivo con la v8 los usa).
 - Los textos de "¿De dónde sale cada número?" en la portada salen del motor y esperan revisión legal; si cambia una regla, actualizarlos (hay una prueba que los compara).
 
+## Cuándo se publica (desde 2026-11-22)
+- Todo lo que entra a `main` sale a finiqa.cl en minutos, así que `main` es "lo publicado".
+- **Publicación semanal: viernes en la tarde-noche (desde las 19:00, hora de Chile)**, que es cuando el dueño puede revisar. Durante la semana los PR quedan abiertos y listos; no se mezclan a `main` hasta el viernes.
+- **Urgencias, el mismo día** (avisando al dueño): un monto mal calculado, algo que impide usar la calculadora, o un problema legal o de privacidad. Lo demás (textos, diseño, mejoras del lector) espera al viernes.
+- La UF y la UTM siguen solas todos los días (no cuentan como publicación).
+- Antes de publicar el viernes: pruebas en verde, una pasada en el iPhone del dueño con un PDF de ejemplo, y que se vean el aviso de "referencial" y las bases legales. Si salen varios PR juntos, la caché de `sw.js` sube un solo número.
+- Cada publicación (también las urgentes) se anota en `NOVEDADES.md`, en lenguaje simple.
+
 ## Entorno
 - Sin Node.js local: las pruebas corren en GitHub Actions (Node y Chrome) y en el navegador (`pruebas/index.html`).
 - Servidor local sin caché: `python3 pruebas/servidor-local.py` (puerto 8642). Con `http.server` normal el navegador guarda copias viejas de los archivos.
