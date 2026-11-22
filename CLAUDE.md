@@ -37,9 +37,10 @@ Calculadora de finiquito para Chile, para personas no expertas. El dueño no pro
 - Cada publicación (también las urgentes) se anota en `NOVEDADES.md`, en lenguaje simple.
 
 ## Orden del trabajo
-- **Una sola lista de pendientes:** `docs/privado/backlog.md` (privada). Partes: Esta semana (máx. 3), Siguiente, En pausa (con su rama), Algún día, Hecho. Al empezar una sesión, ubicar la tarea en esa lista; al terminarla, pasarla a «Hecho».
-- **Ideas sueltas:** si en medio de una tarea el dueño cuenta una idea que no tiene que ver con ella, ofrecer anotarla en «Algún día» (una línea, con fecha) y seguir con la tarea. No abrir el tema salvo que el dueño lo pida.
-- **Cierre del viernes:** una tarea programada de la app abre una sesión los viernes a las 19:00 que prepara el cierre (PR listos, borrador de novedades, lista al día, propuesta de 3 cosas para la semana). Nada se mezcla ni se publica sin el sí del dueño en esa sesión.
+- **Una sola lista de pendientes: el tablero interactivo** (privado, en claude.ai; dirección y forma de leerlo y escribirlo en `docs/privado/tablero/LEEME.md`). Columnas: Esta semana (máx. 3), Siguiente, En pausa (con su rama), Algún día, Hecho. Al empezar una sesión, leer el tablero y ubicar la tarea; al terminarla, pasarla a «Hecho». `docs/privado/backlog.md` es solo una copia de los viernes: no se edita.
+- **Ideas nuevas: siempre conversando con Claude** (el tablero no tiene botón para crearlas). Claude las anota en «Algún día» ya revisadas: en el campo `revision`, unas líneas con qué entendió, quién la haría, el tamaño y si se parece a otra tarjeta. Si la idea surge en medio de otra tarea, se anota y se sigue con la tarea; no se abre el tema salvo que el dueño lo pida.
+- **Barra lateral de Code:** cada sesión de Finiqa va en su sección («Finiqa · Esta semana», «Finiqa · En pausa» o «Finiqa · Terminadas»).
+- **Cierre del viernes:** una tarea programada de la app abre una sesión los viernes a las 19:00 que prepara el cierre (PR listos, borrador de novedades, tablero al día, propuesta de 3 cosas para la semana) y guarda la copia del tablero. Nada se mezcla, se publica ni se mueve sin el sí del dueño en esa sesión.
 - Chat (claude.ai) es para pensar: negocio, abogado, precios, textos. Code es para construir y mantener la lista.
 
 ## Entorno
