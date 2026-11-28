@@ -4,9 +4,13 @@ Qué cambió en finiqa.cl en cada publicación, explicado en simple.
 Se publica los viernes en la tarde-noche; las urgencias salen el mismo día y se marcan como **urgente**.
 La UF y la UTM se actualizan solas todos los días y no se anotan aquí.
 
-## Próxima publicación: viernes 27-11-2026
+## Próxima publicación: viernes 04-12-2026
 
 - (Nada pendiente todavía.)
+
+## 28-11-2026
+
+- Sin cambios en la página ni en los cálculos. Se reforzó la publicación automática del sitio para que un tropiezo de GitHub no la detenga. (PR #25)
 
 ## 20-11-2026
 
